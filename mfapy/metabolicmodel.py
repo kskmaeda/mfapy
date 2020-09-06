@@ -15,10 +15,11 @@ import itertools, re, math
 from . import mdv
 from . import optimize
 from . import carbonsource
-import copy,time
+import copy, time
 #from numba import jit
 #from assimulo.problem import Explicit_Problem
 #from assimulo.solvers import CVode
+
 
 class MetabolicModel:
     """
@@ -60,8 +61,12 @@ class MetabolicModel:
         self.experiments = {}
 
     """
-
-    def __init__(self, reactions, reversible, metabolites, target_fragments, mode = "normal"):
+    def __init__(self,
+                 reactions,
+                 reversible,
+                 metabolites,
+                 target_fragments,
+                 mode="normal"):
         '''
         Generator of new instances
         '''
@@ -81,23 +86,23 @@ class MetabolicModel:
         #
         # Class configuration data
         #
-        self.configuration={
-        'callbacklevel': 0,
-        'default_reaction_lb': 0.001,
-        'default_reaction_ub': 5000.0,
-        'default_metabolite_lb': 0.001,
-        'default_metabolite_ub': 500.0,
-        'default_reversible_lb': -300,
-        'default_reversible_ub': 300.0,
-        'iteration_max': 1000,
-        'initial_search_repeats_in_grid_search': 50,
-        'initial_search_iteration_max': 1000,
-        'grid_search_iterations':1, #170623 for Grid Maeda
-        'add_naturalisotope_in_calmdv':"no", #180616
-        'number_of_repeat':3,
-        'ncpus':3,
-        'ppservers': ("",),
-        'odesolver': "scipy" # or "sundials"
+        self.configuration = {
+            'callbacklevel': 0,
+            'default_reaction_lb': 0.001,
+            'default_reaction_ub': 5000.0,
+            'default_metabolite_lb': 0.001,
+            'default_metabolite_ub': 500.0,
+            'default_reversible_lb': -300,
+            'default_reversible_ub': 300.0,
+            'iteration_max': 1000,
+            'initial_search_repeats_in_grid_search': 50,
+            'initial_search_iteration_max': 1000,
+            'grid_search_iterations': 1,  #170623 for Grid Maeda
+            'add_naturalisotope_in_calmdv': "no",  #180616
+            'number_of_repeat': 3,
+            'ncpus': 3,
+            'ppservers': ("", ),
+            'odesolver': "scipy"  # or "sundials"
         }
         #
 
@@ -112,8 +117,9 @@ class MetabolicModel:
         for id in self.metabolites:
             if self.metabolites[id]['carbonsource'] == 'carbonsource':
                 self.carbon_source[id] = {
-                    'size':self.metabolites[id]['C_number'],
-                    'IDV':list(numpy.zeros(2**self.metabolites[id]['C_number']))
+                    'size': self.metabolites[id]['C_number'],
+                    'IDV':
+                    list(numpy.zeros(2**self.metabolites[id]['C_number']))
                 }
         #
         # Initilize flux values
@@ -124,9 +130,11 @@ class MetabolicModel:
             self.reactions[id]['type'] = 'free'
             self.reactions[id]['reversible'] = 'no'
             if 'lb' not in self.reactions[id]:
-                self.metabolites[id]['lb'] = self.configuration["default_reaction_lb"]
+                self.metabolites[id]['lb'] = self.configuration[
+                    "default_reaction_lb"]
             if 'ub' not in self.reactions[id]:
-                self.metabolites[id]['ub'] = self.configuration["default_reaction_ub"]
+                self.metabolites[id]['ub'] = self.configuration[
+                    "default_reaction_ub"]
         #
         # Initilize metabolite conc values
         # Impremented in ver 1.03
@@ -136,9 +144,11 @@ class MetabolicModel:
             self.metabolites[id]['stdev'] = 1.0
             self.metabolites[id]['type'] = 'fixed'
             if 'lb' not in self.metabolites[id]:
-                self.metabolites[id]['lb'] = self.configuration["default_metabolite_lb"]
+                self.metabolites[id]['lb'] = self.configuration[
+                    "default_metabolite_lb"]
             if 'ub' not in self.metabolites[id]:
-                self.metabolites[id]['ub'] = self.configuration["default_metabolite_ub"]
+                self.metabolites[id]['ub'] = self.configuration[
+                    "default_metabolite_ub"]
         #
         # Reversible reactions
         #
@@ -151,9 +161,11 @@ class MetabolicModel:
             #self.reactions[forward]['reversible'] = id
             #self.reactions[reverse]['reversible'] = id
             if 'lb' not in self.reversible[id]:
-                self.reversible[id]['lb'] = self.configuration["default_reversible_lb"]
+                self.reversible[id]['lb'] = self.configuration[
+                    "default_reversible_lb"]
             if 'ub' not in self.reversible[id]:
-                self.reversible[id]['ub'] = self.configuration["default_reversible_ub"]
+                self.reversible[id]['ub'] = self.configuration[
+                    "default_reversible_ub"]
         #
         # Define vector lengthes of mass spectra of oberved fragments
         #
@@ -166,7 +178,8 @@ class MetabolicModel:
 
             if self.target_fragments[id]['type'] == 'intermediate':
                 metabolite, positions = atommap.split("_")
-                self.target_fragments[id]['number'] = len(positions.split(":")) + 1
+                self.target_fragments[id]['number'] = len(
+                    positions.split(":")) + 1
             #
             # In the case of amino acid analysis using GC-MS, vector length is (sum of carbon numbers) + 1
             #
@@ -183,23 +196,29 @@ class MetabolicModel:
                 precursor, nl, product = atommap.split("+")
                 nl_positions = nl.split("_")[1]
                 product_positions = product.split("_")[1]
-                self.target_fragments[id]['number'] = (len(positions.split(":"))+1) * (len(positions.split(":"))+1)
+                self.target_fragments[id]['number'] = (
+                    len(positions.split(":")) +
+                    1) * (len(positions.split(":")) + 1)
             #
             # Set matrixes on isotope effects
             #
             formula = self.target_fragments[id]['formula']
             if not formula == "":
                 num = self.target_fragments[id]['number']
-                self.target_fragments[id]['natural_isotope_cancellation'] = mdv.INV_correcting(formula)[0:num,0:num]
-                self.target_fragments[id]['natural_isotope_addition'] = mdv.transition_matrix(formula)[0:num,0:num]
-        if mode=="debug":
+                self.target_fragments[id][
+                    'natural_isotope_cancellation'] = mdv.INV_correcting(
+                        formula)[0:num, 0:num]
+                self.target_fragments[id][
+                    'natural_isotope_addition'] = mdv.transition_matrix(
+                        formula)[0:num, 0:num]
+        if mode == "debug":
             self.configuration["callbacklevel"] = 7
 
         #
         # Update the metabolic model to generate stoichiometry matrix
         #
         self.reconstruct()
-        if mode=="debug":
+        if mode == "debug":
             self.configuration["callbacklevel"] = 1
 
     def update(self):
@@ -240,16 +259,16 @@ class MetabolicModel:
                         lead += 1
                         if columnCount == lead:
                             return M
-                M[i],M[r] = M[r],M[i]
+                M[i], M[r] = M[r], M[i]
                 lv = M[r][lead]
-                M[r] = [ mrx / lv for mrx in M[r]]
+                M[r] = [mrx / lv for mrx in M[r]]
                 for i in range(rowCount):
                     if i != r:
                         lv = M[i][lead]
-                        M[i] = [ iv - lv*rv for rv,iv in zip(M[r],M[i])]
+                        M[i] = [iv - lv * rv for rv, iv in zip(M[r], M[i])]
                         for j in range(columnCount):
                             if abs(M[i][j]) < 0.000001:
-                                M[i][j] = 0;
+                                M[i][j] = 0
                 lead += 1
             for r in range(rowCount):
                 for c in range(columnCount):
@@ -260,9 +279,9 @@ class MetabolicModel:
         #
         # List of reaction id
         #
-        self.reaction_ids = [];
-        self.metabolite_ids = [];
-        self.reversible_ids = [];
+        self.reaction_ids = []
+        self.metabolite_ids = []
+        self.reversible_ids = []
         #
         #list of Rm_initial
         #
@@ -270,7 +289,7 @@ class MetabolicModel:
         #
         # row_names
         #
-        self.matrix_row_names = [];
+        self.matrix_row_names = []
         #
         # dictionary for storing information for stoichiometry matrix
         #
@@ -278,11 +297,21 @@ class MetabolicModel:
         #
         # Set vectors
         #
-        self.vector ={"independent_lb":[], "independent_ub":[], "lb":[], "ub":[], "use":[], "value":[], "stdev":[], "ids":[]}
+        self.vector = {
+            "independent_lb": [],
+            "independent_ub": [],
+            "lb": [],
+            "ub": [],
+            "use": [],
+            "value": [],
+            "stdev": [],
+            "ids": []
+        }
         self.state_ids = []
         counter = 0
 
-        for id in sorted(self.reactions.keys(), key=lambda x: self.reactions[x]['order']):
+        for id in sorted(self.reactions.keys(),
+                         key=lambda x: self.reactions[x]['order']):
             # ignore unused reactions
             #
             #if self.reactions[id]['use'] != 'use':
@@ -314,7 +343,8 @@ class MetabolicModel:
                 self.vector["use"].append(float(1.0))
             else:
                 self.vector["use"].append(float(0.0))
-        for id in sorted(self.metabolites.keys(), key=lambda x: self.metabolites[x]['order']):
+        for id in sorted(self.metabolites.keys(),
+                         key=lambda x: self.metabolites[x]['order']):
             #
             # ignore excreted and carbonsource metabolites
             #
@@ -345,7 +375,8 @@ class MetabolicModel:
             else:
                 self.vector["use"].append(float(0.0))
 
-        for id in sorted(self.reversible.keys(), key=lambda x: self.reversible[x]['order']):
+        for id in sorted(self.reversible.keys(),
+                         key=lambda x: self.reversible[x]['order']):
             #
             # Order of the reaction in self.reaction_ids is stored
             #
@@ -378,7 +409,7 @@ class MetabolicModel:
             # get reaction formula and substrate, product names
             #
             reaction = self.reactions[id]['stoichiometry']
-            reaction.replace(" ","")
+            reaction.replace(" ", "")
             substrate, product = reaction.split("-->")
             #
             # Substrate
@@ -397,7 +428,8 @@ class MetabolicModel:
                 #
                 # Ignore if carbon source metabolites
                 #
-                if self.metabolites[metabolite_name]['carbonsource'] == 'carbonsource':
+                if self.metabolites[metabolite_name][
+                        'carbonsource'] == 'carbonsource':
                     continue
                 #
                 # Ignore if excreted metabolites
@@ -416,7 +448,8 @@ class MetabolicModel:
                     metabolite_name = metabolite
                 elif len(metabolite.split("}")) == 2:
                     stnum, metabolite_name = metabolite.split("}")
-                if self.metabolites[metabolite_name]['carbonsource'] == 'carbonsource':
+                if self.metabolites[metabolite_name][
+                        'carbonsource'] == 'carbonsource':
                     continue
                 if self.metabolites[metabolite_name]['excreted'] == 'excreted':
                     continue
@@ -434,7 +467,7 @@ class MetabolicModel:
         for id in self.reaction_ids:
             #remove spaces in reaction
             reaction = self.reactions[id]['stoichiometry']
-            reaction.replace(" ","")
+            reaction.replace(" ", "")
             substrate, product = reaction.split("-->")
             #
             # Substrate
@@ -448,12 +481,14 @@ class MetabolicModel:
                     stnum = 1.0
                 elif len(metabolite.split("}")) == 2:
                     stnum, metabolite_name = metabolite.split("}")
-                    stnum = float(stnum.replace("{",""))
-                self.reactions[id]["stoichiometry_metabolite_list"][metabolite_name] = float(stnum) * -1.0
+                    stnum = float(stnum.replace("{", ""))
+                self.reactions[id]["stoichiometry_metabolite_list"][
+                    metabolite_name] = float(stnum) * -1.0
                 #
                 # Ignore if carbon source metabolites
                 #
-                if self.metabolites[metabolite_name]['carbonsource'] == 'carbonsource':
+                if self.metabolites[metabolite_name][
+                        'carbonsource'] == 'carbonsource':
                     continue
                 #
                 # Ignore if excreted metabolites
@@ -466,7 +501,9 @@ class MetabolicModel:
                 if self.reactions[id]['type'] == 'pseudo':
                     continue
                 #
-                stoichiometry_matirx_hash[metabolite_name][id] = stoichiometry_matirx_hash[metabolite_name][id] - float(stnum)
+                stoichiometry_matirx_hash[metabolite_name][
+                    id] = stoichiometry_matirx_hash[metabolite_name][
+                        id] - float(stnum)
             #
             # Product
             #
@@ -476,17 +513,23 @@ class MetabolicModel:
                     stnum = 1.0
                 elif len(metabolite.split("}")) == 2:
                     stnum, metabolite_name = metabolite.split("}")
-                    stnum = stnum.replace("{","")
-                self.reactions[id]["stoichiometry_metabolite_list"][metabolite_name] = float(stnum) * 1.0
-                if self.metabolites[metabolite_name]['carbonsource'] == 'carbonsource':
+                    stnum = stnum.replace("{", "")
+                self.reactions[id]["stoichiometry_metabolite_list"][
+                    metabolite_name] = float(stnum) * 1.0
+                if self.metabolites[metabolite_name][
+                        'carbonsource'] == 'carbonsource':
                     continue
                 if self.metabolites[metabolite_name]['excreted'] == 'excreted':
                     continue
-                stoichiometry_matirx_hash[metabolite_name][id] = stoichiometry_matirx_hash[metabolite_name][id]+float(stnum)
+                stoichiometry_matirx_hash[metabolite_name][
+                    id] = stoichiometry_matirx_hash[metabolite_name][
+                        id] + float(stnum)
         #
         # Initialize stoichiometry matrix
         #
-        stoichiometry_matrix = numpy.zeros((len(intermediates), len(self.reaction_ids)+len(self.metabolite_ids)+len(self.reversible_ids)))
+        stoichiometry_matrix = numpy.zeros(
+            (len(intermediates), len(self.reaction_ids) +
+             len(self.metabolite_ids) + len(self.reversible_ids)))
         #
         # List of intermediates
         # This is a row oder in the matrix
@@ -495,25 +538,47 @@ class MetabolicModel:
         #
         # Construct a stoichiometry matrix
         #
-        for i, intermediate in enumerate (intermediates_sorted):
+        for i, intermediate in enumerate(intermediates_sorted):
             self.matrix_row_names.append(intermediate)
             Rm_initial.append(0.0)
             for id in self.reaction_ids:
-                stoichiometry_matrix[i][self.reactions[id]["position_in_tmp_r"]] = stoichiometry_matirx_hash[intermediate][id]
+                stoichiometry_matrix[i][
+                    self.reactions[id]
+                    ["position_in_tmp_r"]] = stoichiometry_matirx_hash[
+                        intermediate][id]
                 # Callback stoichiometry_matrix information
                 if (self.configuration['callbacklevel'] >= 8):
 
-                    if (id in self.reactions[id]['stoichiometry']) and (stoichiometry_matirx_hash[intermediates_sorted[i]][id] == 0):
-                        print("Stoichiometry_matrix information:", intermediates_sorted[i], id, self.reactions[id]['stoichiometry'], stoichiometry_matirx_hash[intermediates_sorted[i]][id])
-                    if (id not in self.reactions[id]['stoichiometry']) and (stoichiometry_matirx_hash[intermediates_sorted[i]][id] != 0):
-                        print("Stoichiometry_matrix information:", intermediates_sorted[i], id, self.reactions[id]['stoichiometry'], stoichiometry_matirx_hash[intermediates_sorted[i]][id])
+                    if (id in self.reactions[id]['stoichiometry']) and (
+                            stoichiometry_matirx_hash[
+                                intermediates_sorted[i]][id] == 0):
+                        print(
+                            "Stoichiometry_matrix information:",
+                            intermediates_sorted[i], id,
+                            self.reactions[id]['stoichiometry'],
+                            stoichiometry_matirx_hash[
+                                intermediates_sorted[i]][id])
+                    if (id not in self.reactions[id]['stoichiometry']) and (
+                            stoichiometry_matirx_hash[
+                                intermediates_sorted[i]][id] != 0):
+                        print(
+                            "Stoichiometry_matrix information:",
+                            intermediates_sorted[i], id,
+                            self.reactions[id]['stoichiometry'],
+                            stoichiometry_matirx_hash[
+                                intermediates_sorted[i]][id])
 
         #
         # Initialize fixed_flux matrix
         #
-        fixed_reactions = [id for id in self.reaction_ids if self.reactions[id]["type"] == "fixed"]
+        fixed_reactions = [
+            id for id in self.reaction_ids
+            if self.reactions[id]["type"] == "fixed"
+        ]
         #fixed_reactions.extend([id for id in self.reaction_ids if self.reactions[id]["type"] == "pseudo"])
-        fixedflux_matrix = numpy.zeros((len(fixed_reactions), len(self.reaction_ids)+len(self.metabolite_ids)+len(self.reversible_ids)))
+        fixedflux_matrix = numpy.zeros(
+            (len(fixed_reactions), len(self.reaction_ids) +
+             len(self.metabolite_ids) + len(self.reversible_ids)))
         #
         # List of fixed reactions
         # This is a row oder in the matrix
@@ -536,8 +601,13 @@ class MetabolicModel:
         #
         # Initialize fixed_met matrix
         #
-        fixed_metabolites = [id for id in self.metabolite_ids if self.metabolites[id]["type"] == "fixed"]
-        fixedmetabolite_matrix = numpy.zeros((len(fixed_metabolites), len(self.reaction_ids)+len(self.metabolite_ids)+len(self.reversible_ids)))
+        fixed_metabolites = [
+            id for id in self.metabolite_ids
+            if self.metabolites[id]["type"] == "fixed"
+        ]
+        fixedmetabolite_matrix = numpy.zeros(
+            (len(fixed_metabolites), len(self.reaction_ids) +
+             len(self.metabolite_ids) + len(self.reversible_ids)))
         #
         # List of fixed reactions
         # This is a row oder in the matrix
@@ -546,7 +616,8 @@ class MetabolicModel:
             self.matrix_row_names.append(ids)
             self.metabolites[ids]["position_in_Rm_initial"] = len(Rm_initial)
             Rm_initial.append(self.metabolites[ids]['value'])
-            fixedmetabolite_matrix[i][self.metabolites[ids]["position_in_tmp_r"]] = 1.0
+            fixedmetabolite_matrix[i][self.metabolites[ids]
+                                      ["position_in_tmp_r"]] = 1.0
         #
         # Combine Stoichiometry matrix and fixed_flux matrix
         #
@@ -555,12 +626,16 @@ class MetabolicModel:
         # [ fixedmetabolite matrix    ]
         matrix_st_ff_fm = numpy.vstack((matrix_st_ff, fixedmetabolite_matrix))
 
-
         #
         # Initialize fixed_reversible matrix
         #
-        fixed_reversible = [id for id in self.reversible_ids if self.reversible[id]["type"] == "fixed"]
-        fixedreversible_matrix = numpy.zeros((len(fixed_reversible), len(self.reaction_ids)+len(self.metabolite_ids)+len(self.reversible_ids)))
+        fixed_reversible = [
+            id for id in self.reversible_ids
+            if self.reversible[id]["type"] == "fixed"
+        ]
+        fixedreversible_matrix = numpy.zeros(
+            (len(fixed_reversible), len(self.reaction_ids) +
+             len(self.metabolite_ids) + len(self.reversible_ids)))
         #
         # List of fixed reactions
         # This is a row oder in the matrix
@@ -570,8 +645,8 @@ class MetabolicModel:
             self.reversible[ids]["position_in_Rm_initial"] = len(Rm_initial)
             Rm_initial.append(self.reversible[ids]['value'])
 
-            fixedreversible_matrix[i][self.reversible[ids]["position_in_tmp_r"]] = 1.0
-
+            fixedreversible_matrix[i][self.reversible[ids]
+                                      ["position_in_tmp_r"]] = 1.0
 
         #
         # Combine Stoichiometry matrix and fixed_flux matrix
@@ -580,12 +655,15 @@ class MetabolicModel:
         # [ fixedflux matrix    ]
         # [ fixedmetabolite matrix    ]
         # [ fixedreversible matrix    ]
-        matrix_st_ff_fm_fr = numpy.vstack((matrix_st_ff_fm, fixedreversible_matrix))
+        matrix_st_ff_fm_fr = numpy.vstack(
+            (matrix_st_ff_fm, fixedreversible_matrix))
 
         #
         # constraints for reversible reaction
         #
-        reversible_matrix = numpy.zeros((len(self.reversible_ids), len(self.reaction_ids)+len(self.metabolite_ids)+len(self.reversible_ids)))
+        reversible_matrix = numpy.zeros(
+            (len(self.reversible_ids), len(self.reaction_ids) +
+             len(self.metabolite_ids) + len(self.reversible_ids)))
         #
         # List of fixed reactions
         # This is a row oder in the matrix
@@ -596,7 +674,8 @@ class MetabolicModel:
             Rm_initial.append(0.0)
             forward_ids = self.reversible[ids]["forward"]
             reverse_ids = self.reversible[ids]["reverse"]
-            reversible_matrix[i][self.reversible[ids]["position_in_tmp_r"]] = -1.0
+            reversible_matrix[i][self.reversible[ids]
+                                 ["position_in_tmp_r"]] = -1.0
             #reversible_matrix[i][self.reactions[forward_id]["position_in_tmp_r"]] = 1.0
             #reversible_matrix[i][self.reactions[reverse_id]["position_in_tmp_r"]] = -1.0
             #
@@ -605,17 +684,20 @@ class MetabolicModel:
             #
             for forward_id in forward_ids.split("+"):
                 if forward_id in self.reactions:
-                    reversible_matrix[i][self.reactions[forward_id]["position_in_tmp_r"]] = 1.0
+                    reversible_matrix[i][self.reactions[forward_id]
+                                         ["position_in_tmp_r"]] = 1.0
             for reverse_id in reverse_ids.split("+"):
                 if reverse_id in self.reactions:
-                    reversible_matrix[i][self.reactions[reverse_id]["position_in_tmp_r"]] = -1.0
+                    reversible_matrix[i][self.reactions[reverse_id]
+                                         ["position_in_tmp_r"]] = -1.0
 
         # [ Stoichiometry matrix ]
         # [ fixedflux matrix    ]
         # [ fixedmetabolite matrix    ]
         # [ fixedreversible matrix    ]
         # [ reversible matrix    ]
-        matrix_st_ff_fm_fr_rev = numpy.vstack((matrix_st_ff_fm_fr, reversible_matrix))
+        matrix_st_ff_fm_fr_rev = numpy.vstack(
+            (matrix_st_ff_fm_fr, reversible_matrix))
 
         #
         # Set independent fluxes from a reduced row eschron form of matrix_before
@@ -626,11 +708,11 @@ class MetabolicModel:
         if (self.configuration['callbacklevel'] >= 8):
             print("stoichiometry_matrix", stoichiometry_matrix)
             print("fixedflux_matrix", fixedflux_matrix)
-            print("fixedmetabolite_matrix",fixedmetabolite_matrix)
+            print("fixedmetabolite_matrix", fixedmetabolite_matrix)
             print("fixedreversible_matrix", fixedreversible_matrix)
             print("reversible_matrix", reversible_matrix)
             print("matrix_st_ff_fm_fr_rev", matrix_st_ff_fm_fr_rev)
-            print("tmp_rref",tmp_rref)
+            print("tmp_rref", tmp_rref)
         independence = numpy.ones(tmp_rref.shape[1])
         for i in range(tmp_rref.shape[0]):
             nz = sorted(numpy.nonzero(tmp_rref[i]))[0]
@@ -639,7 +721,9 @@ class MetabolicModel:
         #
         #independent flux matrix
         #
-        independentflux_matrix = numpy.zeros((len(independent_flux), len(self.reaction_ids)+len(self.metabolite_ids)+len(self.reversible_ids)))
+        independentflux_matrix = numpy.zeros(
+            (len(independent_flux), len(self.reaction_ids) +
+             len(self.metabolite_ids) + len(self.reversible_ids)))
         #
         # independent flux
         #
@@ -652,19 +736,22 @@ class MetabolicModel:
             for id in self.reaction_ids:
                 if position == self.reactions[id]["position_in_tmp_r"]:
                     self.matrix_row_names.append(id)
-                    self.reactions[id]["position_in_Rm_initial"] = len(Rm_initial)
+                    self.reactions[id]["position_in_Rm_initial"] = len(
+                        Rm_initial)
                     self.vector["independent_flux"][i] = ("reaction", id)
 
             for id in self.metabolite_ids:
                 if position == self.metabolites[id]["position_in_tmp_r"]:
                     self.matrix_row_names.append(id)
-                    self.metabolites[id]["position_in_Rm_initial"] = len(Rm_initial)
+                    self.metabolites[id]["position_in_Rm_initial"] = len(
+                        Rm_initial)
                     self.vector["independent_flux"][i] = ("metabolite", id)
 
             for id in self.reversible_ids:
                 if position == self.reversible[id]["position_in_tmp_r"]:
                     self.matrix_row_names.append(id)
-                    self.reversible[id]["position_in_Rm_initial"] = len(Rm_initial)
+                    self.reversible[id]["position_in_Rm_initial"] = len(
+                        Rm_initial)
                     self.vector["independent_flux"][i] = ("reversible", id)
 
             Rm_initial.append(0.0)
@@ -678,35 +765,49 @@ class MetabolicModel:
         # [ fixedreversible matrix    ]
         # [ reversible matrix    ]
         # [ indepenent matrix    ]
-        self.matrix = numpy.vstack((matrix_st_ff_fm_fr_rev, independentflux_matrix))
+        self.matrix = numpy.vstack(
+            (matrix_st_ff_fm_fr_rev, independentflux_matrix))
         #
         #
         # Set numbers
         self.numbers = {}
         self.numbers["stoichiometric_start"] = 0
         self.numbers["stoichiometric_end"] = stoichiometry_matrix.shape[0]
-        self.numbers["fixed_reaction_start"] = self.numbers["stoichiometric_end"]
-        self.numbers["fixed_reaction_end"] = self.numbers["fixed_reaction_start"] + fixedflux_matrix.shape[0]
-        self.numbers["fixed_metabolite_start"] = self.numbers["fixed_reaction_end"]
-        self.numbers["fixed_metabolite_end"] = self.numbers["fixed_metabolite_start"] + fixedmetabolite_matrix.shape[0]
-        self.numbers["fixed_reversible_start"] = self.numbers["fixed_metabolite_end"]
-        self.numbers["fixed_reversible_end"] = self.numbers["fixed_reversible_start"] + fixedreversible_matrix.shape[0]
+        self.numbers["fixed_reaction_start"] = self.numbers[
+            "stoichiometric_end"]
+        self.numbers["fixed_reaction_end"] = self.numbers[
+            "fixed_reaction_start"] + fixedflux_matrix.shape[0]
+        self.numbers["fixed_metabolite_start"] = self.numbers[
+            "fixed_reaction_end"]
+        self.numbers["fixed_metabolite_end"] = self.numbers[
+            "fixed_metabolite_start"] + fixedmetabolite_matrix.shape[0]
+        self.numbers["fixed_reversible_start"] = self.numbers[
+            "fixed_metabolite_end"]
+        self.numbers["fixed_reversible_end"] = self.numbers[
+            "fixed_reversible_start"] + fixedreversible_matrix.shape[0]
         self.numbers["reversible_start"] = self.numbers["fixed_reversible_end"]
-        self.numbers["reversible_end"] = self.numbers["reversible_start"] + reversible_matrix.shape[0]
+        self.numbers["reversible_end"] = self.numbers[
+            "reversible_start"] + reversible_matrix.shape[0]
         self.numbers["independent_start"] = self.numbers["reversible_end"]
-        self.numbers["independent_end"] = self.numbers["independent_start"] + independentflux_matrix.shape[0]
+        self.numbers["independent_end"] = self.numbers[
+            "independent_start"] + independentflux_matrix.shape[0]
         self.numbers["independent_number"] = independentflux_matrix.shape[0]
         self.numbers["total_number"] = self.numbers["independent_end"] * 1
         #
         # for diffmdv
         #
-        self.numbers["reac_met_number"] = len(self.reaction_ids)+len(self.metabolite_ids)
+        self.numbers["reac_met_number"] = len(self.reaction_ids) + len(
+            self.metabolite_ids)
         #
         # Rm_initial
         #
         self.vector["Rm_initial"] = numpy.array(Rm_initial)
-        self.vector["independent_lb"] = [self.vector["lb"][v] for v in independent_flux]
-        self.vector["independent_ub"] = [self.vector["ub"][v] for v in independent_flux]
+        self.vector["independent_lb"] = [
+            self.vector["lb"][v] for v in independent_flux
+        ]
+        self.vector["independent_ub"] = [
+            self.vector["ub"][v] for v in independent_flux
+        ]
         #
         # independent flux
         #
@@ -744,8 +845,7 @@ class MetabolicModel:
             self.r_depended.append(list(temp))
         return True
 
-
-    def reconstruct(self, mode = "no"):
+    def reconstruct(self, mode="no"):
         """
         Method to reconstruct the metabolic model to generate new stoichiometry matrix and a function to
         calculate MDV data.
@@ -787,7 +887,7 @@ class MetabolicModel:
         self.func["diffmdv"] = diffmdv
         return calmdv_text
 
-    def generate_calmdv(self,mode = 'normal'):
+    def generate_calmdv(self, mode='normal'):
         """
         Constructer of the python function to calculate MDV of target fragments from a metabolic flux distribution.
         This function is performed in reconstruct()
@@ -808,40 +908,45 @@ class MetabolicModel:
         def generate_iterative_list(list):
             result = []
             temp = []
-            result = step(0, list, result,temp[:])
-            return(result)
+            result = step(0, list, result, temp[:])
+            return (result)
+
         def step(number, list, result, temp):
             for i in range(list[number] + 1):
                 tempp = temp[:]
                 tempp.append(i)
-                if (number == len(list)-1):
+                if (number == len(list) - 1):
                     result.append(tempp)
                 else:
-                    result = step(number+1, list, result, tempp[:])
-            return(result)
+                    result = step(number + 1, list, result, tempp[:])
+            return (result)
+
         def decompose_EMU(string):
             compound, atom_string = string.split('_')
             #atoms = list(atom_string)
             atoms = atom_string.split(':')
             return (compound, atoms)
+
         def compose_EMU(compound, atoms):
             atomstring = ":".join([str(i) for i in atoms])
-            return (compound+"_"+atomstring)
-
+            return (compound + "_" + atomstring)
 
         def generate_parent_EMU(reaction, emu, rev, symmetry, metabolites):
 
             compound, numbers = decompose_EMU(emu)
             if self.configuration['callbacklevel'] == 7:
                 print(emu, compound, numbers)
-            reaction.replace(' ', '')#remode space
+            reaction.replace(' ', '')  #remode space
             parent_atoms = convert_reaction_to_EMU(reaction)
             # when rec == 1
             if rev == 1:
-                parent_atoms = [parent_atoms[int(x)] for x in sorted(range(len(parent_atoms)), reverse = True)]
+                parent_atoms = [
+                    parent_atoms[int(x)]
+                    for x in sorted(range(len(parent_atoms)), reverse=True)
+                ]
             emu_candidates = [parent_atoms[int(x) - 1] for x in numbers]
-            emu_dict = {};
-            emu_list = [];
+            emu_dict = {}
+            emu_list = []
 
             for emu_atom in emu_candidates:
                 compound, number = emu_atom.split('_')
@@ -849,7 +954,8 @@ class MetabolicModel:
                     emu_dict[compound].append(number)
                 else:
                     emu_dict[compound] = [number]
-            for compound_tmp in sorted(emu_dict.keys()):#Generate EMU symbols for each substrate
+            for compound_tmp in sorted(
+                    emu_dict.keys()):  #Generate EMU symbols for each substrate
                 #
                 # [1]DHAP => DHAP
                 #
@@ -859,22 +965,27 @@ class MetabolicModel:
                 emu = compose_EMU(compound, sorted(emu_dict[compound_tmp]))
                 #for number in sorted(emu_dict[compound_tmp]):
                 #    emu += number
-                if compound in symmetry:# Symmetry metabolite
-                    emu_rev = compound + "_";
-                    tmp = [int(metabolites[compound]['C_number']) + 1 - int(x) for x in emu_dict[compound_tmp]]
+                if compound in symmetry:  # Symmetry metabolite
+                    emu_rev = compound + "_"
+                    tmp = [
+                        int(metabolites[compound]['C_number']) + 1 - int(x)
+                        for x in emu_dict[compound_tmp]
+                    ]
                     for number in sorted(tmp):
                         emu_rev += str(number)
                     emu_rev = compose_EMU(compound, sorted(sorted(tmp)))
                     emu = sorted([emu, emu_rev])[0]
                 emu_list.append(emu)
 
-            return (emu_list);
+            return (emu_list)
+
         def convert_reaction_to_EMU(string):
             string.replace(' ', '')
             result = []
             for emu in string.split('+'):
                 result = result + convert_one_symbol_to_EMU(emu)
-            return(result)
+            return (result)
+
         def convert_one_symbol_to_EMU(string):
             string.replace(' ', '')
             compound, atom_strings = string.split('_')
@@ -882,10 +993,11 @@ class MetabolicModel:
             for atom in atom_strings.split(":"):
                 result.append(compound + "_" + atom)
             return (result)
+
         def size_of_EMU(string):
             string.replace(' ', '')
             numbers = re.findall("[_|:]([1-9]+)", string)
-            return(len(numbers))
+            return (len(numbers))
             #return ( int(sum ([len(x) for x in numbers])));
         def compound_of_EMU(string):
             string.replace(' ', '')
@@ -895,39 +1007,52 @@ class MetabolicModel:
         def permute(A):
             #A=[2,3]
             #B=[[0,1],[0,1,2]]
-            B=[range(i) for i in A]
-            n=len(B)
-            if n==2:
-                return list(itertools.product(B[0],B[1]))
+            B = [range(i) for i in A]
+            n = len(B)
+            if n == 2:
+                return list(itertools.product(B[0], B[1]))
 
-            elif n==3:
-                return  list(itertools.product(B[0],B[1],B[2]))
+            elif n == 3:
+                return list(itertools.product(B[0], B[1], B[2]))
 
-            elif n==4:
-                return  list(itertools.product(B[0],B[1],B[2],B[3]))
+            elif n == 4:
+                return list(itertools.product(B[0], B[1], B[2], B[3]))
 
-            elif n==5:
-                return  list(itertools.product(B[0],B[1],B[2],B[3],B[4]))
+            elif n == 5:
+                return list(itertools.product(B[0], B[1], B[2], B[3], B[4]))
 
-            elif n==6:
-                return  list(itertools.product(B[0],B[1],B[2],B[3],B[4],B[5]))
+            elif n == 6:
+                return list(
+                    itertools.product(B[0], B[1], B[2], B[3], B[4], B[5]))
 
-            elif n==7:
-                return  list(itertools.product(B[0],B[1],B[2],B[3],B[4],B[5],B[6]))
+            elif n == 7:
+                return list(
+                    itertools.product(B[0], B[1], B[2], B[3], B[4], B[5],
+                                      B[6]))
 
-            elif n==8:
-                return  list(itertools.product(B[0],B[1],B[2],B[3],B[4],B[5],B[6],B[7]))
+            elif n == 8:
+                return list(
+                    itertools.product(B[0], B[1], B[2], B[3], B[4], B[5], B[6],
+                                      B[7]))
 
-            elif n==9:
-                return  list(itertools.product(B[0],B[1],B[2],B[3],B[4],B[5],B[6],B[7],B[8]))
+            elif n == 9:
+                return list(
+                    itertools.product(B[0], B[1], B[2], B[3], B[4], B[5], B[6],
+                                      B[7], B[8]))
 
-            elif n==10:
-                return  list(itertools.product(B[0],B[1],B[2],B[3],B[4],B[5],B[6],B[7],B[8],B[9]))
-            elif n==11:
-                return  list(itertools.product(B[0],B[1],B[2],B[3],B[4],B[5],B[6],B[7],B[8],B[9],B[10]))
+            elif n == 10:
+                return list(
+                    itertools.product(B[0], B[1], B[2], B[3], B[4], B[5], B[6],
+                                      B[7], B[8], B[9]))
+            elif n == 11:
+                return list(
+                    itertools.product(B[0], B[1], B[2], B[3], B[4], B[5], B[6],
+                                      B[7], B[8], B[9], B[10]))
 
-            elif n==12:
-                return  list(itertools.product(B[0],B[1],B[2],B[3],B[4],B[5],B[6],B[7],B[8],B[9],B[10],B[11]))
+            elif n == 12:
+                return list(
+                    itertools.product(B[0], B[1], B[2], B[3], B[4], B[5], B[6],
+                                      B[7], B[8], B[9], B[10], B[11]))
 
             else:
                 print("Error! number of substrate are too much")
@@ -943,7 +1068,8 @@ class MetabolicModel:
         #
         # Maximal carbon number (EMU size) of metabolites in the model
         #
-        emu_size_max = max([self.metabolites[x]['C_number'] for x in self.metabolites.keys()])
+        emu_size_max = max(
+            [self.metabolites[x]['C_number'] for x in self.metabolites.keys()])
         #
         # Preparation of "pathway"
         #
@@ -981,7 +1107,7 @@ class MetabolicModel:
             # reaction is splitted by '-->'
             # substrate: FBP
             # product: DHAP+GAP
-            substrates,products = reaction.split("-->")
+            substrates, products = reaction.split("-->")
             #
             # atom map is splitted by '-->'
             # substrate: ABCDEF
@@ -1007,13 +1133,14 @@ class MetabolicModel:
                 # separate metabolite to each carbon
                 #
                 for i in range(int(self.metabolites[substrate]['C_number'])):
-                    substrate_atoms.append("["+str(n)+"]"+substrate + "_" + str(i + 1))
+                    substrate_atoms.append("[" + str(n) + "]" + substrate +
+                                           "_" + str(i + 1))
                 # FBP ->
                 #substrate_atoms = [[1]FBP_1,[1]FBP_2,[1]FBP_3,[1]FBP_4,[1]FBP_5,[1]FBP_6]
                 #
             #
             #
-            for i, substrate_atom  in enumerate (substrate_atoms):
+            for i, substrate_atom in enumerate(substrate_atoms):
                 substrate_atom_hash[atom_substrate[i]] = substrate_atom
                 #substrate_atom_hash[A]:[1]FBP_1
                 #substrate_atom_hash[B]:[1]FBP_2
@@ -1032,7 +1159,8 @@ class MetabolicModel:
                     continue
                 for i in range(int(self.metabolites[product]['C_number'])):
 
-                    product_atoms.append("["+str(n)+"]"+product + "_" + str(i + 1))
+                    product_atoms.append("[" + str(n) + "]" + product + "_" +
+                                         str(i + 1))
             #
             # product_atoms_atoms = [[1]DHAP_1,[1]DHAP_2,[1]DHAP_3,[2]GAP_1,[2]GAP_2,[2]GAP_3]
             #
@@ -1047,9 +1175,10 @@ class MetabolicModel:
             #
             # atom mapping from products to substrate
             #
-            p_atom_to_s_atom = {};
+            p_atom_to_s_atom = {}
             for atom in product_atom_hash:
-                p_atom_to_s_atom[product_atom_hash[atom]] = substrate_atom_hash[atom]
+                p_atom_to_s_atom[
+                    product_atom_hash[atom]] = substrate_atom_hash[atom]
             #p_atom_to_s_atom
             #[1]DHAP_3:[1]FBP_1
             #[1]DHAP_2:[1]FBP_2
@@ -1061,7 +1190,7 @@ class MetabolicModel:
             # for each product
             # DHAP+GAP
             #
-            for i,product in enumerate(products.split("+")):
+            for i, product in enumerate(products.split("+")):
                 #
                 # Ignore exceted metabolites
                 #
@@ -1079,15 +1208,20 @@ class MetabolicModel:
                 #
                 #product:DHAP
                 #
-                product_ordered = "["+str(i)+"]"+product
+                product_ordered = "[" + str(i) + "]" + product
                 #
-                substrate_list = [x for x in (sorted(p_atom_to_s_atom.keys())) if product_ordered in x]
+                substrate_list = [
+                    x for x in (sorted(p_atom_to_s_atom.keys()))
+                    if product_ordered in x
+                ]
                 #
                 #substrate_list = [DHAP_1, DHAP_2, DHAP_3]
                 #
                 for emu_atom in sorted(substrate_list):
-                    if current_compound == p_atom_to_s_atom[emu_atom].split("_")[0]:
-                        substrate_emu = substrate_emu+":"+p_atom_to_s_atom[emu_atom].split("_")[1]
+                    if current_compound == p_atom_to_s_atom[emu_atom].split(
+                            "_")[0]:
+                        substrate_emu = substrate_emu + ":" + p_atom_to_s_atom[
+                            emu_atom].split("_")[1]
                         #2nd loop
                         #substrate_emu = p_atom_to_s_atom[[1]DHAP_2] = [1]FBP_32
                         #3rd loop
@@ -1096,32 +1230,36 @@ class MetabolicModel:
                         #1st loop
                         substrate_emu = p_atom_to_s_atom[emu_atom]
                         #substrate_emu = p_atom_to_s_atom[[1]DHAP_1] = [1]FBP_3
-                        current_compound = p_atom_to_s_atom[emu_atom].split("_")[0]
+                        current_compound = p_atom_to_s_atom[emu_atom].split(
+                            "_")[0]
                         #current_compound = [1]FBP
                     else:
                         #Compound is changed in the atom list
-                        substrate_emu = substrate_emu+"+"+p_atom_to_s_atom[emu_atom]
-                        current_compound = p_atom_to_s_atom[emu_atom].split("_")[0]
+                        substrate_emu = substrate_emu + "+" + p_atom_to_s_atom[
+                            emu_atom]
+                        current_compound = p_atom_to_s_atom[emu_atom].split(
+                            "_")[0]
                 # Recored as "v1 DHAP [1]FBP_321"
-                pathway.append(id_for_output+" "+product+" "+substrate_emu)
+                pathway.append(id_for_output + " " + product + " " +
+                               substrate_emu)
                 #
                 # [1]DHAP: [1]FBP_321
                 # [2]GAP: [1]FBP_123
                 if self.configuration['callbacklevel'] == 7:
-                    print("Define product-> substrate_carbon relationship", id_for_output+" "+product+" "+substrate_emu)
-
+                    print("Define product-> substrate_carbon relationship",
+                          id_for_output + " " + product + " " + substrate_emu)
 
         #Initialize dictionaries
-        matrix = {};
-        hit_emuset = set();
-        previous_hit_emuset = set();
-        hit_emu_reactionset = set();
+        matrix = {}
+        hit_emuset = set()
+        previous_hit_emuset = set()
+        hit_emu_reactionset = set()
 
-        emu_intermediate = {};
-        emu_source = {};
+        emu_intermediate = {}
+        emu_source = {}
 
-        self.emu_order_in_X = [];
-        self.emu_order_in_y = [];
+        self.emu_order_in_X = []
+        self.emu_order_in_y = []
 
         # Search metabolic network from target compounds
         # ex. Leu57	gcms	AcCOAmit_12 + PYRmit_23 + PYRmit_23	no
@@ -1172,13 +1310,14 @@ class MetabolicModel:
                         #
                         if len(data.split(' ')) < 3:
                             continue
-                        reaction_id, r_product, reaction = data.split(' ');
+                        reaction_id, r_product, reaction = data.split(' ')
                         #
                         # if a reaction producing indentical product is found
                         #
                         if product == r_product:
                             if self.configuration['callbacklevel'] == 7:
-                                print('|-Hitted:', reaction_id, r_product, reaction)
+                                print('|-Hitted:', reaction_id, r_product,
+                                      reaction)
                             #
                             # get substrate EMU(s)
                             #
@@ -1187,33 +1326,50 @@ class MetabolicModel:
                             #
                             if '*' in reaction_id:
                                 # When symmetry product
-                                substrate_emus = generate_parent_EMU(reaction, product_emu, 0, self.symmetry, self.metabolites)
-                                substrate_emus_reaction = '+'.join(substrate_emus)
-                                hit_emu_reactionset.update([substrate_emus_reaction])
+                                substrate_emus = generate_parent_EMU(
+                                    reaction, product_emu, 0, self.symmetry,
+                                    self.metabolites)
+                                substrate_emus_reaction = '+'.join(
+                                    substrate_emus)
+                                hit_emu_reactionset.update(
+                                    [substrate_emus_reaction])
                                 # Add substrate to hit_emu
                                 for substrate_emu in substrate_emus:
                                     hit_emuset.update([substrate_emu])
                                 if self.configuration['callbacklevel'] == 7:
-                                    print('  |-Found the forward relationship for symmetry metabolile', reaction, r_product, product_emu, reaction_id, substrate_emus)
+                                    print(
+                                        '  |-Found the forward relationship for symmetry metabolile',
+                                        reaction, r_product, product_emu,
+                                        reaction_id, substrate_emus)
                                 # Reversed
-                                substrate_emus = generate_parent_EMU(reaction, product_emu, 1, self.symmetry, self.metabolites)
-                                substrate_emus_reaction_rev = '+'.join(substrate_emus)
-                                hit_emu_reactionset.update([substrate_emus_reaction_rev])
+                                substrate_emus = generate_parent_EMU(
+                                    reaction, product_emu, 1, self.symmetry,
+                                    self.metabolites)
+                                substrate_emus_reaction_rev = '+'.join(
+                                    substrate_emus)
+                                hit_emu_reactionset.update(
+                                    [substrate_emus_reaction_rev])
                                 # Add substrate to hit_emu
                                 for substrate_emu in substrate_emus:
                                     hit_emuset.update([substrate_emu])
                                 if self.configuration['callbacklevel'] == 7:
-                                    print('  |-Found the reverse relationship for symmetry metabolile', reaction, r_product, product_emu, reaction_id, substrate_emus)
+                                    print(
+                                        '  |-Found the reverse relationship for symmetry metabolile',
+                                        reaction, r_product, product_emu,
+                                        reaction_id, substrate_emus)
                             #
                             # MS/MS
                             #
-                            elif r_product in self.target_fragments and self.target_fragments[r_product]['type'] == "msms":
+                            elif r_product in self.target_fragments and self.target_fragments[
+                                    r_product]['type'] == "msms":
                                 #decode
                                 substrate_emus = reaction.split("+")
-                                substrate_emus_reaction = '+'.join(substrate_emus)
+                                substrate_emus_reaction = '+'.join(
+                                    substrate_emus)
                                 #
                                 #
-                                hit_emu_reactionset.update([substrate_emus_reaction])
+                                hit_emu_reactionset.update(
+                                    [substrate_emus_reaction])
                                 # Add substrate to hit_emu
                                 for substrate_emu in substrate_emus:
                                     hit_emuset.update([substrate_emu])
@@ -1223,11 +1379,17 @@ class MetabolicModel:
                             else:
                                 # When non-symmetry product
 
-                                substrate_emus = generate_parent_EMU(reaction, product_emu, 0, self.symmetry, self.metabolites)
+                                substrate_emus = generate_parent_EMU(
+                                    reaction, product_emu, 0, self.symmetry,
+                                    self.metabolites)
                                 if self.configuration['callbacklevel'] == 7:
-                                    print('  |-Found the relationship for non symmetry metabolile', reaction, product_emu, substrate_emus)
-                                substrate_emus_reaction = '+'.join(substrate_emus)
-                                hit_emu_reactionset.update([substrate_emus_reaction])
+                                    print(
+                                        '  |-Found the relationship for non symmetry metabolile',
+                                        reaction, product_emu, substrate_emus)
+                                substrate_emus_reaction = '+'.join(
+                                    substrate_emus)
+                                hit_emu_reactionset.update(
+                                    [substrate_emus_reaction])
                                 # Add substrate to hit_emu
                                 for substrate_emu in substrate_emus:
                                     hit_emuset.update([substrate_emu])
@@ -1240,68 +1402,123 @@ class MetabolicModel:
                             if product_emu in matrix:
                                 # When product_emu exists in matrix
 
-                                if substrate_emus_reaction in matrix[product_emu]:
+                                if substrate_emus_reaction in matrix[
+                                        product_emu]:
                                     # When substrate_emus_reaction is in product_emu
                                     # Add id
-                                    matrix[product_emu][substrate_emus_reaction].append(reaction_id)
-                                    if self.configuration['callbacklevel'] == 7:
-                                        print('    |-Added the relationship to matrix', product_emu, substrate_emus_reaction, reaction_id)
+                                    matrix[product_emu][
+                                        substrate_emus_reaction].append(
+                                            reaction_id)
+                                    if self.configuration[
+                                            'callbacklevel'] == 7:
+                                        print(
+                                            '    |-Added the relationship to matrix',
+                                            product_emu,
+                                            substrate_emus_reaction,
+                                            reaction_id)
 
                                 else:
                                     # Prepare new data
-                                    matrix[product_emu].setdefault(substrate_emus_reaction, [reaction_id])
-                                    if self.configuration['callbacklevel'] == 7:
-                                        print('    |-Added the relationship to matrix', product_emu, substrate_emus_reaction, reaction_id )
+                                    matrix[product_emu].setdefault(
+                                        substrate_emus_reaction, [reaction_id])
+                                    if self.configuration[
+                                            'callbacklevel'] == 7:
+                                        print(
+                                            '    |-Added the relationship to matrix',
+                                            product_emu,
+                                            substrate_emus_reaction,
+                                            reaction_id)
                             else:
                                 # When product_emu is NOT in matrix
                                 # Prepare new data
-                                matrix[product_emu] = {substrate_emus_reaction:[reaction_id]}
+                                matrix[product_emu] = {
+                                    substrate_emus_reaction: [reaction_id]
+                                }
                                 if self.configuration['callbacklevel'] == 7:
-                                    print('    |-Added the relationship to matrix', product_emu, substrate_emus_reaction, reaction_id)
+                                    print(
+                                        '    |-Added the relationship to matrix',
+                                        product_emu, substrate_emus_reaction,
+                                        reaction_id)
                             # For orthogonal data
                             if product_emu in matrix[product_emu]:
-                                matrix[product_emu][product_emu].append(reaction_id)
+                                matrix[product_emu][product_emu].append(
+                                    reaction_id)
                                 if self.configuration['callbacklevel'] == 7:
-                                    print('    |-Added the diagonal relationship to matrix', product_emu, reaction_id)
+                                    print(
+                                        '    |-Added the diagonal relationship to matrix',
+                                        product_emu, reaction_id)
                             else:
-                                matrix[product_emu].setdefault(product_emu, [reaction_id])
+                                matrix[product_emu].setdefault(
+                                    product_emu, [reaction_id])
                                 if self.configuration['callbacklevel'] == 7:
-                                    print('    |-Added the diagonal relationship to matrix', product_emu, reaction_id)
+                                    print(
+                                        '    |-Added the diagonal relationship to matrix',
+                                        product_emu, reaction_id)
 
                             if '*' in reaction_id:
                                 # Add data to matrix
                                 if product_emu in matrix:
-                                    if substrate_emus_reaction_rev in matrix[product_emu]:
+                                    if substrate_emus_reaction_rev in matrix[
+                                            product_emu]:
                                         # When substrate_emus_reaction is in product_emu
                                         # Add id
-                                        matrix[product_emu][substrate_emus_reaction_rev].append(reaction_id)
-                                        if self.configuration['callbacklevel'] == 7:
-                                            print('    |-Added the relationship to matrix', product_emu, substrate_emus_reaction_rev, reaction_id)
+                                        matrix[product_emu][
+                                            substrate_emus_reaction_rev].append(
+                                                reaction_id)
+                                        if self.configuration[
+                                                'callbacklevel'] == 7:
+                                            print(
+                                                '    |-Added the relationship to matrix',
+                                                product_emu,
+                                                substrate_emus_reaction_rev,
+                                                reaction_id)
                                     else:
                                         # Prepare new data
-                                        matrix[product_emu].setdefault(substrate_emus_reaction_rev, [reaction_id])
-                                        if self.configuration['callbacklevel'] == 7:
-                                            print('    |-Added the relationship to matrix', product_emu, substrate_emus_reaction_rev, reaction_id)
+                                        matrix[product_emu].setdefault(
+                                            substrate_emus_reaction_rev,
+                                            [reaction_id])
+                                        if self.configuration[
+                                                'callbacklevel'] == 7:
+                                            print(
+                                                '    |-Added the relationship to matrix',
+                                                product_emu,
+                                                substrate_emus_reaction_rev,
+                                                reaction_id)
                                 else:
                                     # When product_emu exists is NOT in matrix
                                     # Prepare new data
-                                    matrix[product_emu] = {substrate_emus_reaction_rev:[reaction_id]}
-                                    if self.configuration['callbacklevel'] == 7:
-                                        print('    |-Added the relationship to matrix', product_emu, substrate_emus_reaction_rev, reaction_id)
+                                    matrix[product_emu] = {
+                                        substrate_emus_reaction_rev:
+                                        [reaction_id]
+                                    }
+                                    if self.configuration[
+                                            'callbacklevel'] == 7:
+                                        print(
+                                            '    |-Added the relationship to matrix',
+                                            product_emu,
+                                            substrate_emus_reaction_rev,
+                                            reaction_id)
                                 if product_emu in matrix[product_emu]:
-                                    matrix[product_emu][product_emu].append(reaction_id)
-                                    if self.configuration['callbacklevel'] == 7:
-                                        print('    |-Added the diagonal relationship to matrix', product_emu, reaction_id)
+                                    matrix[product_emu][product_emu].append(
+                                        reaction_id)
+                                    if self.configuration[
+                                            'callbacklevel'] == 7:
+                                        print(
+                                            '    |-Added the diagonal relationship to matrix',
+                                            product_emu, reaction_id)
                                 else:
-                                    matrix[product_emu].setdefault(product_emu, [reaction_id])
-                                    if self.configuration['callbacklevel'] == 7:
-                                        print('    |-Added the diagonal relationship to matrix', product_emu, reaction_id)
+                                    matrix[product_emu].setdefault(
+                                        product_emu, [reaction_id])
+                                    if self.configuration[
+                                            'callbacklevel'] == 7:
+                                        print(
+                                            '    |-Added the diagonal relationship to matrix',
+                                            product_emu, reaction_id)
                     # Update previous_hit_emuset by newly found product_emu
                     previous_hit_emuset.update([product_emu])
                 # When no new product_emu is found
                 if previous_hit_emuset == hit_emuset:
                     break
-
 
         #
         # Import 'deepcopy'
@@ -1331,9 +1548,12 @@ class MetabolicModel:
             #
             emus_in_matrix = {}
             for product_emu in matrix:
-                if len(matrix[product_emu][product_emu]) != 1: continue #Only EMUs generated from only one precursor EMU
-                if product_emu in emus_in_fragment:continue # ignore direct precursor
-                if product_emu.split('_')[0] in self.symmetry: continue #Ignore EMUs of symmetry metaboiltes
+                if len(matrix[product_emu][product_emu]) != 1:
+                    continue  #Only EMUs generated from only one precursor EMU
+                if product_emu in emus_in_fragment:
+                    continue  # ignore direct precursor
+                if product_emu.split('_')[0] in self.symmetry:
+                    continue  #Ignore EMUs of symmetry metaboiltes
                 for substrate_emu in matrix[product_emu]:
                     if substrate_emu != product_emu:
                         emus_in_matrix[product_emu] = str(substrate_emu)
@@ -1344,32 +1564,50 @@ class MetabolicModel:
             emus_to_remove_list = emus_in_matrix.keys()
             for emus_to_remove in emus_to_remove_list:
 
-                matrix_temp = deepcopy(matrix) #generate temporary matrix
+                matrix_temp = deepcopy(matrix)  #generate temporary matrix
                 if self.configuration['callbacklevel'] == 7:
                     print('searchng', emus_to_remove)
                 counter = 0
                 for product_emu in matrix:
-                    if product_emu==emus_to_remove: continue
+                    if product_emu == emus_to_remove: continue
                     for substrate_emu in matrix[product_emu]:
-                        if substrate_emu==emus_to_remove:
+                        if substrate_emu == emus_to_remove:
                             #
                             # if new partial reaction still exists.
                             #
-                            if emus_in_matrix[substrate_emu] in matrix_temp[product_emu]:
-                                matrix_temp[product_emu][emus_in_matrix[substrate_emu]].extend(matrix[product_emu][substrate_emu][:])
+                            if emus_in_matrix[substrate_emu] in matrix_temp[
+                                    product_emu]:
+                                matrix_temp[product_emu][
+                                    emus_in_matrix[substrate_emu]].extend(
+                                        matrix[product_emu][substrate_emu][:])
                                 if self.configuration['callbacklevel'] == 7:
-                                    print("removed + added", product_emu, substrate_emu, emus_to_remove, emus_in_matrix[substrate_emu], matrix[product_emu][substrate_emu][:], matrix_temp[product_emu][emus_in_matrix[substrate_emu]])
+                                    print(
+                                        "removed + added", product_emu,
+                                        substrate_emu, emus_to_remove,
+                                        emus_in_matrix[substrate_emu],
+                                        matrix[product_emu][substrate_emu][:],
+                                        matrix_temp[product_emu][
+                                            emus_in_matrix[substrate_emu]])
                             else:
-                                matrix_temp[product_emu][emus_in_matrix[substrate_emu]] = matrix[product_emu][substrate_emu][:]
+                                matrix_temp[product_emu][
+                                    emus_in_matrix[substrate_emu]] = matrix[
+                                        product_emu][substrate_emu][:]
                                 if self.configuration['callbacklevel'] == 7:
-                                    print("removed ", product_emu, substrate_emu, emus_to_remove, emus_in_matrix[substrate_emu], matrix[product_emu][substrate_emu][:], matrix_temp[product_emu][emus_in_matrix[substrate_emu]] )
+                                    print(
+                                        "removed ", product_emu, substrate_emu,
+                                        emus_to_remove,
+                                        emus_in_matrix[substrate_emu],
+                                        matrix[product_emu][substrate_emu][:],
+                                        matrix_temp[product_emu][
+                                            emus_in_matrix[substrate_emu]])
                             matrix_temp[product_emu].pop(substrate_emu)
                             counter = counter + 1
                         if '+' in substrate_emu:
                             substrate_emu_temp = []
                             for emu in substrate_emu.split('+'):
                                 if emu == emus_to_remove:
-                                    substrate_emu_temp.append(emus_in_matrix[emu])
+                                    substrate_emu_temp.append(
+                                        emus_in_matrix[emu])
                                 else:
                                     substrate_emu_temp.append(emu)
                             substrate_emu_temp = "+".join(substrate_emu_temp)
@@ -1377,17 +1615,36 @@ class MetabolicModel:
                                 #
                                 # if new partial reaction still exists.
                                 #
-                                if substrate_emu_temp in matrix_temp[product_emu]:
-                                    matrix_temp[product_emu][substrate_emu_temp].extend(matrix[product_emu][substrate_emu][:])
-                                    if self.configuration['callbacklevel'] == 7:
-                                        print("removed + added +", product_emu, substrate_emu, substrate_emu_temp, matrix[product_emu][substrate_emu][:], matrix_temp[product_emu][substrate_emu_temp])
+                                if substrate_emu_temp in matrix_temp[
+                                        product_emu]:
+                                    matrix_temp[product_emu][
+                                        substrate_emu_temp].extend(
+                                            matrix[product_emu][substrate_emu]
+                                            [:])
+                                    if self.configuration[
+                                            'callbacklevel'] == 7:
+                                        print(
+                                            "removed + added +", product_emu,
+                                            substrate_emu, substrate_emu_temp,
+                                            matrix[product_emu][substrate_emu]
+                                            [:], matrix_temp[product_emu]
+                                            [substrate_emu_temp])
                                 else:
-                                    matrix_temp[product_emu][substrate_emu_temp] = matrix[product_emu][substrate_emu][:]
-                                    if self.configuration['callbacklevel'] == 7:
-                                        print("removed +", product_emu, substrate_emu, substrate_emu_temp, matrix[product_emu][substrate_emu][:], matrix_temp[product_emu][substrate_emu_temp])
+                                    matrix_temp[product_emu][
+                                        substrate_emu_temp] = matrix[
+                                            product_emu][substrate_emu][:]
+                                    if self.configuration[
+                                            'callbacklevel'] == 7:
+                                        print(
+                                            "removed +", product_emu,
+                                            substrate_emu, substrate_emu_temp,
+                                            matrix[product_emu][substrate_emu]
+                                            [:], matrix_temp[product_emu]
+                                            [substrate_emu_temp])
                                 matrix_temp[product_emu].pop(substrate_emu)
                                 hit_emu_reactionset.remove(substrate_emu)
-                                hit_emu_reactionset.update([substrate_emu_temp])
+                                hit_emu_reactionset.update(
+                                    [substrate_emu_temp])
                                 counter = counter + 1
                 if counter > 0:
                     matrix_temp.pop(emus_to_remove)
@@ -1397,15 +1654,14 @@ class MetabolicModel:
                     for product_emu in emus_in_matrix:
                         # replace precursor data
                         if emus_in_matrix[product_emu] == emus_to_remove:
-                            emus_in_matrix[product_emu] = str(emus_in_matrix[emus_to_remove])
+                            emus_in_matrix[product_emu] = str(
+                                emus_in_matrix[emus_to_remove])
                     # discord product data
                     emus_in_matrix.pop(emus_to_remove)
                     hit_emu_reactionset.remove(emus_to_remove)
                     if self.configuration['callbacklevel'] == 7:
                         print(emus_to_remove, "was removed")
                 matrix = deepcopy(matrix_temp)
-
-
 
         #
         #start making function
@@ -1426,13 +1682,15 @@ class MetabolicModel:
         #print matrix
         # AX = BY
 
-        for emu_size in range(1, int(emu_size_max)+1):
+        for emu_size in range(1, int(emu_size_max) + 1):
             #
             # List up all EMUs of intermediated in the X of emu_size
             # from hit_emu_reactionset, side of emu is equal to emu_size, only one metabolite and not carbon source.
-            emu_intermediate_of_this_layer = [x for x in hit_emu_reactionset if (size_of_EMU(x) == emu_size)
-                                                                                and (not ('+' in x))
-                                                                                and not (compound_of_EMU(x) in self.carbon_source)]
+            emu_intermediate_of_this_layer = [
+                x for x in hit_emu_reactionset
+                if (size_of_EMU(x) == emu_size) and (not ('+' in x))
+                and not (compound_of_EMU(x) in self.carbon_source)
+            ]
             emu_intermediate_of_this_layer.sort()
 
             if len(emu_intermediate_of_this_layer) == 0:
@@ -1440,12 +1698,16 @@ class MetabolicModel:
             #
             emu_sourse_of_this_layer = []
             # from hit_emu_reactionset, side of emu is equal to emu_size, more than one metabolite
-            emu_sourse_of_this_layer += [x for x in hit_emu_reactionset if (size_of_EMU(x) == emu_size)
-                                                                                and ('+' in x)]
+            emu_sourse_of_this_layer += [
+                x for x in hit_emu_reactionset
+                if (size_of_EMU(x) == emu_size) and ('+' in x)
+            ]
             # from hit_emu_reactionset, side of emu is equal to emu_size, one metabolite and carbon source
-            emu_sourse_of_this_layer += [x for x in hit_emu_reactionset if (size_of_EMU(x) == emu_size)
-                                                                                and (not ('+' in x))
-                                                                                and (compound_of_EMU(x) in self.carbon_source)]
+            emu_sourse_of_this_layer += [
+                x for x in hit_emu_reactionset
+                if (size_of_EMU(x) == emu_size) and (not ('+' in x)) and (
+                    compound_of_EMU(x) in self.carbon_source)
+            ]
 
             emu_sourse_of_this_layer.sort()
             #
@@ -1454,58 +1716,87 @@ class MetabolicModel:
             #
             for i in range(len(emu_intermediate_of_this_layer)):
                 if emu_size in emu_intermediate:
-                    emu_intermediate[emu_size].setdefault(emu_intermediate_of_this_layer[i],i)
+                    emu_intermediate[emu_size].setdefault(
+                        emu_intermediate_of_this_layer[i], i)
                 else:
-                    emu_intermediate[emu_size] = {emu_intermediate_of_this_layer[i]:i}
+                    emu_intermediate[emu_size] = {
+                        emu_intermediate_of_this_layer[i]: i
+                    }
             # Store position in linerized matrix X <=> emu
             for i, emu in enumerate(emu_intermediate_of_this_layer):
-                for num in range(int(emu_size)+1):
+                for num in range(int(emu_size) + 1):
                     self.emu_order_in_X.append((emu, num))
 
             #
             for i in range(len(emu_intermediate_of_this_layer)):
                 if emu_size in emu_intermediate:
-                    emu_intermediate[emu_size].setdefault(emu_intermediate_of_this_layer[i],i)
+                    emu_intermediate[emu_size].setdefault(
+                        emu_intermediate_of_this_layer[i], i)
                 else:
-                    emu_intermediate[emu_size] = {emu_intermediate_of_this_layer[i]:i}
+                    emu_intermediate[emu_size] = {
+                        emu_intermediate_of_this_layer[i]: i
+                    }
 
             #Output A
             # number of line
             size_i = len(emu_intermediate_of_this_layer)
             # number of lows
             size_s = len(emu_sourse_of_this_layer)
-            string += "\tA_" + str(emu_size) + " =  numpy.zeros(("+str(size_i * size_i)+",))\n"
+            string += "\tA_" + str(emu_size) + " =  numpy.zeros((" + str(
+                size_i * size_i) + ",))\n"
             for product in emu_intermediate_of_this_layer:
-                string += "\t#"+product+"\n"
+                string += "\t#" + product + "\n"
                 for substrate in emu_intermediate_of_this_layer:
                     cell = []
                     if substrate in matrix[product]:
                         if substrate == product:
                             for reaction_id in matrix[product].get(substrate):
                                 if '*' in reaction_id:
-                                    cell.append(reaction_id.replace("*", "") + "/ 2.0")
+                                    cell.append(
+                                        reaction_id.replace("*", "") + "/ 2.0")
                                 else:
                                     cell.append(reaction_id)
                             cell_string = "-1.0 * (" + ' + '.join(cell) + ")"
-                            string += "\tA_" + str(emu_size) + "["+str(emu_intermediate_of_this_layer.index(product) * size_i + emu_intermediate_of_this_layer.index(substrate))+"] = " + cell_string + "\n"
+                            string += "\tA_" + str(emu_size) + "[" + str(
+                                emu_intermediate_of_this_layer.index(product) *
+                                size_i + emu_intermediate_of_this_layer.index(
+                                    substrate)) + "] = " + cell_string + "\n"
                             if self.configuration['callbacklevel'] == 7:
-                                print(product,'\t',substrate, "\tA_" + str(emu_size) + "["+str(emu_intermediate_of_this_layer.index(product) * size_i + emu_intermediate_of_this_layer.index(substrate))+"] = " + cell_string)
+                                print(
+                                    product, '\t', substrate,
+                                    "\tA_" + str(emu_size) + "[" + str(
+                                        emu_intermediate_of_this_layer.index(
+                                            product) * size_i +
+                                        emu_intermediate_of_this_layer.index(
+                                            substrate)) + "] = " + cell_string)
 
                         else:
                             for reaction_id in matrix[product].get(substrate):
                                 if '*' in reaction_id:
-                                    cell.append("0.5 * " + reaction_id.replace("*", ""))
+                                    cell.append("0.5 * " +
+                                                reaction_id.replace("*", ""))
                                 else:
                                     cell.append(reaction_id)
                             cell_string = ' + '.join(cell)
-                            string += "\tA_" + str(emu_size) + "["+str(emu_intermediate_of_this_layer.index(product) * size_i + emu_intermediate_of_this_layer.index(substrate))+"] = " + cell_string + "\n"
+                            string += "\tA_" + str(emu_size) + "[" + str(
+                                emu_intermediate_of_this_layer.index(product) *
+                                size_i + emu_intermediate_of_this_layer.index(
+                                    substrate)) + "] = " + cell_string + "\n"
                             if self.configuration['callbacklevel'] == 7:
-                                print(product,'\t',substrate, "\tA_" + str(emu_size) + "["+str(emu_intermediate_of_this_layer.index(product) * size_i + emu_intermediate_of_this_layer.index(substrate))+"] = " + cell_string)
+                                print(
+                                    product, '\t', substrate,
+                                    "\tA_" + str(emu_size) + "[" + str(
+                                        emu_intermediate_of_this_layer.index(
+                                            product) * size_i +
+                                        emu_intermediate_of_this_layer.index(
+                                            substrate)) + "] = " + cell_string)
 
-            string += "\tA_" + str(emu_size) + ".resize(("+str(size_i)+","+ str(size_i)+"))\n"
+            string += "\tA_" + str(emu_size) + ".resize((" + str(
+                size_i) + "," + str(size_i) + "))\n"
 
-        # Output B
-            string += "\tB_" + str(emu_size) + " =  numpy.zeros(("+str(size_i * size_s)+",))\n"
+            # Output B
+            string += "\tB_" + str(emu_size) + " =  numpy.zeros((" + str(
+                size_i * size_s) + ",))\n"
             for product in emu_intermediate_of_this_layer:
                 for substrate in emu_sourse_of_this_layer:
                     cell = []
@@ -1515,83 +1806,142 @@ class MetabolicModel:
                         if substrate == product:
                             for reaction_id in matrix[product].get(substrate):
                                 if '*' in reaction_id:
-                                    cell.append("-0.5 * " + reaction_id.replace("*", ""))
+                                    cell.append("-0.5 * " +
+                                                reaction_id.replace("*", ""))
                                 else:
                                     cell.append("-1.0 * " + reaction_id)
                         else:
                             for reaction_id in matrix[product].get(substrate):
                                 if '*' in reaction_id:
-                                    cell.append("-0.5 * " + reaction_id.replace("*", ""))
+                                    cell.append("-0.5 * " +
+                                                reaction_id.replace("*", ""))
                                 else:
                                     cell.append("-1.0 * " + reaction_id)
                     if len(cell) != 0:
                         cell_string = ' + '.join(cell)
                         if self.configuration['callbacklevel'] == 7:
-                            print(product,'\t',substrate,"\tB_" + str(emu_size) + "["+str(emu_intermediate_of_this_layer.index(product) * size_s + emu_sourse_of_this_layer.index(substrate))+"] = " + cell_string)
+                            print(
+                                product, '\t', substrate,
+                                "\tB_" + str(emu_size) + "[" + str(
+                                    emu_intermediate_of_this_layer.index(
+                                        product) * size_s +
+                                    emu_sourse_of_this_layer.index(substrate))
+                                + "] = " + cell_string)
 
-                        string += "\tB_" + str(emu_size) + "["+str(emu_intermediate_of_this_layer.index(product) * size_s + emu_sourse_of_this_layer.index(substrate))+"] = " + cell_string + "\n"
+                        string += "\tB_" + str(emu_size) + "[" + str(
+                            emu_intermediate_of_this_layer.index(product) *
+                            size_s + emu_sourse_of_this_layer.index(substrate)
+                        ) + "] = " + cell_string + "\n"
 
-            string += "\tB_" + str(emu_size) + ".resize(("+str(size_i)+","+ str(size_s)+"))\n"
-        # Output Y
-            string += "\tY_" + str(emu_size) + " =  numpy.zeros(("+str(len(emu_sourse_of_this_layer) * (emu_size + 1))+",))\n"
+            string += "\tB_" + str(emu_size) + ".resize((" + str(
+                size_i) + "," + str(size_s) + "))\n"
+            # Output Y
+            string += "\tY_" + str(emu_size) + " =  numpy.zeros((" + str(
+                len(emu_sourse_of_this_layer) * (emu_size + 1)) + ",))\n"
             for substrate in emu_sourse_of_this_layer:
                 row = []
                 #print substrate
-                if '+' in substrate:# for rection with multiple substrates
-                    subs_matrix=[]
-                    list_emusize_plus1=[]
+                if '+' in substrate:  # for rection with multiple substrates
+                    subs_matrix = []
+                    list_emusize_plus1 = []
                     n = len(substrate.split('+'))
-                    for subs in substrate.split('+'):   #multiple substrate reaction
-                        list_emusize_plus1.append(size_of_EMU(subs)+1)
+                    for subs in substrate.split(
+                            '+'):  #multiple substrate reaction
+                        list_emusize_plus1.append(size_of_EMU(subs) + 1)
 
-                        if compound_of_EMU(subs) in self.carbon_source:# Carbon source
+                        if compound_of_EMU(
+                                subs) in self.carbon_source:  # Carbon source
                             #sub1_list = generate_carbonsource_MID(sub1)
                             compound = compound_of_EMU(subs)
-                            size = size_of_EMU(subs);
-                            subs_matrix.append(["mdv_carbon_sources[\"" + subs + "\"][" + str(x) + "]" for x in range(size+1)])
+                            size = size_of_EMU(subs)
+                            subs_matrix.append([
+                                "mdv_carbon_sources[\"" + subs + "\"][" +
+                                str(x) + "]" for x in range(size + 1)
+                            ])
 
                         else:
                             compound = compound_of_EMU(subs)
-                            size = size_of_EMU(subs);
-                            subs_matrix.append(["X_" + str(size) + "[" + str((emu_intermediate[int(size)][subs]) * (size+1) + x) + "]" for x in range(size+1)])
-                    sum_length=0
+                            size = size_of_EMU(subs)
+                            subs_matrix.append([
+                                "X_" + str(size) + "[" +
+                                str((emu_intermediate[int(size)][subs]) *
+                                    (size + 1) + x) + "]"
+                                for x in range(size + 1)
+                            ])
+                    sum_length = 0
                     for subs_list in subs_matrix:
-                        sum_length=sum_length +len(subs_list)
-                    equation = [[] for x in range(sum_length)];
-                    conbinaion_list=permute(list_emusize_plus1)
+                        sum_length = sum_length + len(subs_list)
+                    equation = [[] for x in range(sum_length)]
+                    conbinaion_list = permute(list_emusize_plus1)
                     for conbination in conbinaion_list:
-                       equation[sum(conbination)].extend([("*").join([str(subs_matrix[i][conbination[i]]) for i in range(len(conbination))])])
+                        equation[sum(conbination)].extend([("*").join([
+                            str(subs_matrix[i][conbination[i]])
+                            for i in range(len(conbination))
+                        ])])
 
-                    for numberofisotope in range (len(equation)-n+1):
+                    for numberofisotope in range(len(equation) - n + 1):
                         if self.configuration['callbacklevel'] == 7:
-                            print(substrate ,'\t','',"\tY_" + str(emu_size) + "["+str(emu_sourse_of_this_layer.index(substrate)*(emu_size + 1) + numberofisotope)+"] = " + '+'.join(equation[numberofisotope]))
-                        string += "\tY_" + str(emu_size) + "["+str(emu_sourse_of_this_layer.index(substrate)*(emu_size + 1) + numberofisotope)+"] = " + '+'.join(equation[numberofisotope]) + "\n"
+                            print(
+                                substrate, '\t', '',
+                                "\tY_" + str(emu_size) + "[" + str(
+                                    emu_sourse_of_this_layer.index(substrate) *
+                                    (emu_size + 1) + numberofisotope) +
+                                "] = " + '+'.join(equation[numberofisotope]))
+                        string += "\tY_" + str(emu_size) + "[" + str(
+                            emu_sourse_of_this_layer.index(substrate) *
+                            (emu_size + 1) +
+                            numberofisotope) + "] = " + '+'.join(
+                                equation[numberofisotope]) + "\n"
 
                 else:
                     compound = compound_of_EMU(substrate)
-                    size = size_of_EMU(substrate);
-                    for numberofisotope in range(size+1):
+                    size = size_of_EMU(substrate)
+                    for numberofisotope in range(size + 1):
                         if self.configuration['callbacklevel'] == 7:
-                            print(substrate ,'\t','',"\tY_" + str(emu_size) + "["+str(emu_sourse_of_this_layer.index(substrate)*(emu_size + 1) + numberofisotope)+"] = " + "mdv_carbon_sources[\"" + substrate + "\"][" + str(numberofisotope) + "]")
-                        string += "\tY_" + str(emu_size) + "["+str(emu_sourse_of_this_layer.index(substrate)*(emu_size + 1) + numberofisotope)+"] = " + "mdv_carbon_sources[\"" + substrate + "\"][" + str(numberofisotope) + "]" + "\n"
+                            print(
+                                substrate, '\t', '',
+                                "\tY_" + str(emu_size) + "[" + str(
+                                    emu_sourse_of_this_layer.index(substrate) *
+                                    (emu_size + 1) + numberofisotope) +
+                                "] = " + "mdv_carbon_sources[\"" + substrate +
+                                "\"][" + str(numberofisotope) + "]")
+                        string += "\tY_" + str(emu_size) + "[" + str(
+                            emu_sourse_of_this_layer.index(substrate) *
+                            (emu_size + 1) + numberofisotope
+                        ) + "] = " + "mdv_carbon_sources[\"" + substrate + "\"][" + str(
+                            numberofisotope) + "]" + "\n"
 
-            string += "\tY_" + str(emu_size) + ".resize(("+str(size_s)+","+ str(emu_size + 1)+"))\n"
+            string += "\tY_" + str(emu_size) + ".resize((" + str(
+                size_s) + "," + str(emu_size + 1) + "))\n"
             # Calc X
-            string += "\tnonzero_row = numpy.nonzero(numpy.diag(A_" + str(emu_size) + ") < -0.001)[0]\n"
-            string += "\tif len(nonzero_row) == A_" + str(emu_size) + ".shape[0]:\n"
-            string += "\t\tX_" + str(emu_size) + " = numpy.linalg.solve(A_" + str(emu_size) + ", numpy.dot(B_" + str(emu_size) + ", Y_" + str(emu_size) + "))\n"
+            string += "\tnonzero_row = numpy.nonzero(numpy.diag(A_" + str(
+                emu_size) + ") < -0.001)[0]\n"
+            string += "\tif len(nonzero_row) == A_" + str(
+                emu_size) + ".shape[0]:\n"
+            string += "\t\tX_" + str(
+                emu_size) + " = numpy.linalg.solve(A_" + str(
+                    emu_size) + ", numpy.dot(B_" + str(
+                        emu_size) + ", Y_" + str(emu_size) + "))\n"
 
             #string += "\t\tX_" + str(emu_size) + " = numpy.dot(numpy.linalg.inv(A_" + str(emu_size) + "), numpy.dot(B_" + str(emu_size) + ", Y_" + str(emu_size) + "))\n"
 
             string += "\telse:\n"
-            string += "\t\teye = numpy.eye(A_" + str(emu_size) + ".shape[0])[nonzero_row,:]\n"
-            string += "\t\teyeT = numpy.eye(A_" + str(emu_size) + ".shape[0])[:,nonzero_row]\n"
+            string += "\t\teye = numpy.eye(A_" + str(
+                emu_size) + ".shape[0])[nonzero_row,:]\n"
+            string += "\t\teyeT = numpy.eye(A_" + str(
+                emu_size) + ".shape[0])[:,nonzero_row]\n"
             #string += "\t\tprint 'yieldee'\n"
-            string += "\t\tX_" + str(emu_size) + " = numpy.dot(eyeT, numpy.linalg.solve(numpy.dot(numpy.dot(eye, A_" + str(emu_size) + "), eyeT), numpy.dot(eye, numpy.dot(B_" + str(emu_size) + ", Y_" + str(emu_size) + "))))\n"
+            string += "\t\tX_" + str(
+                emu_size
+            ) + " = numpy.dot(eyeT, numpy.linalg.solve(numpy.dot(numpy.dot(eye, A_" + str(
+                emu_size) + "), eyeT), numpy.dot(eye, numpy.dot(B_" + str(
+                    emu_size) + ", Y_" + str(emu_size) + "))))\n"
             #string += "\tprint X_" + str(emu_size) + "\n"
-            string += "\tX_list.extend(list(X_" + str(emu_size)+".ravel()))\n"
-            string += "\tX_" + str(emu_size) + " = X_" + str(emu_size) + ".reshape(("+str(size_i * (emu_size + 1) )+",))\n"
-
+            string += "\tX_list.extend(list(X_" + str(
+                emu_size) + ".ravel()))\n"
+            string += "\tX_" + str(emu_size) + " = X_" + str(
+                emu_size) + ".reshape((" + str(size_i *
+                                               (emu_size + 1)) + ",))\n"
 
         # Calc MV
         for target_fragment in target_fragments:
@@ -1601,22 +1951,23 @@ class MetabolicModel:
             target_emus = target_fragments[target_fragment]['atommap']
             #msms data
             if target_fragments[target_fragment]['type'] == "msms":
-                precursor, neutralloss, product = target_emus.replace(' ','').split('+')
+                precursor, neutralloss, product = target_emus.replace(
+                    ' ', '').split('+')
                 # get sise information
-                size_precursor = size_of_EMU(precursor);
-                size_product = size_of_EMU(product);
-                size_neutralloss = size_of_EMU(neutralloss);
-                product_carbon_number = list(product.split('_')[1]);
+                size_precursor = size_of_EMU(precursor)
+                size_product = size_of_EMU(product)
+                size_neutralloss = size_of_EMU(neutralloss)
+                product_carbon_number = list(product.split('_')[1])
                 # Mask of product carbon
-                product_mask = [];
+                product_mask = []
                 for i in (range(size_precursor)):
                     product_mask.append("0")
                 for i in (product_carbon_number):
                     product_mask[size_precursor - int(i)] = "1"
                 # Number of IDV
-                numberofidv = 2 ** size_precursor
+                numberofidv = 2**size_precursor
                 # intitialize mdv_matrix
-                mdv_matrix = [];
+                mdv_matrix = []
                 for pre in (range(0, size_precursor + 1)):
                     temp = []
                     for pro in (range(0, size_product + 1)):
@@ -1627,77 +1978,117 @@ class MetabolicModel:
                 mrm_count = 0
                 for i in (sorted(range(numberofidv))):
                     #Generate IDV
-                    idv="{0:0>{1}{2}}".format(i, size_precursor, 'b')
+                    idv = "{0:0>{1}{2}}".format(i, size_precursor, 'b')
                     #Generate IDV of product ions
-                    idv_masked_by_product = format((int(idv,2) & int("".join(product_mask),2)), 'b')
+                    idv_masked_by_product = format(
+                        (int(idv, 2) & int("".join(product_mask), 2)), 'b')
                     #Numbers of 13C in precursor and product ion
-                    precursor_isotope_number = sum([1 for x in idv if x == "1"])
-                    product_isotope_number = sum([1 for x in idv_masked_by_product if x == "1"])
-                    if (mdv_matrix[precursor_isotope_number][product_isotope_number] == ''):
-                        mdv_matrix[precursor_isotope_number][product_isotope_number] = mrm_count
+                    precursor_isotope_number = sum(
+                        [1 for x in idv if x == "1"])
+                    product_isotope_number = sum(
+                        [1 for x in idv_masked_by_product if x == "1"])
+                    if (mdv_matrix[precursor_isotope_number]
+                        [product_isotope_number] == ''):
+                        mdv_matrix[precursor_isotope_number][
+                            product_isotope_number] = mrm_count
                         mrm_count = mrm_count + 1
                 #print mdv_matrix
                 #Prepare matrix A and B
-                string += "\tA_" + precursor + product + "= numpy.zeros(("+str((mrm_count)*(mrm_count))+"))\n"
-                string += "\tB_" + precursor + product + "= numpy.zeros(("+str(mrm_count)+",))\n"
+                string += "\tA_" + precursor + product + "= numpy.zeros((" + str(
+                    (mrm_count) * (mrm_count)) + "))\n"
+                string += "\tB_" + precursor + product + "= numpy.zeros((" + str(
+                    mrm_count) + ",))\n"
                 equation_count = 0
 
                 #precursor ion
-                for i in range(size_precursor+1):
+                for i in range(size_precursor + 1):
                     if (equation_count >= mrm_count):
                         break
-                    for j in range(size_product+1):
+                    for j in range(size_product + 1):
                         if (mdv_matrix[i][j] != ''):
-                            string += "\tA_" + precursor + product+"[" + str(equation_count * (mrm_count) + mdv_matrix[i][j]) + "] = 1\n"
-                    string += "\tB_" + precursor + product+"[" + str(equation_count )+ "] = X_"+str(size_precursor)+"[" + str(emu_intermediate[int(size_precursor)][precursor] * (size_precursor + 1) + i)+"]\n"
+                            string += "\tA_" + precursor + product + "[" + str(
+                                equation_count *
+                                (mrm_count) + mdv_matrix[i][j]) + "] = 1\n"
+                    string += "\tB_" + precursor + product + "[" + str(
+                        equation_count
+                    ) + "] = X_" + str(size_precursor) + "[" + str(
+                        emu_intermediate[int(size_precursor)][precursor] *
+                        (size_precursor + 1) + i) + "]\n"
                     equation_count = equation_count + 1
 
                 #product ion
-                for j in range(size_product+1):
+                for j in range(size_product + 1):
                     if (equation_count >= mrm_count):
                         break
-                    for i in range(size_precursor+1):
+                    for i in range(size_precursor + 1):
                         #print i, j, mdv_matrix[i][j]
                         if (mdv_matrix[i][j] != ''):
-                            string += "\tA_" + precursor + product+"[" + str(equation_count * (mrm_count) + mdv_matrix[i][j]) + "] = 1\n"
-                    string += "\tB_" + precursor + product+"[" + str(equation_count )+ "] = X_"+str(size_product)+"[" + str(emu_intermediate[int(size_product)][product] * (size_product + 1) + j)+"]\n"
+                            string += "\tA_" + precursor + product + "[" + str(
+                                equation_count *
+                                (mrm_count) + mdv_matrix[i][j]) + "] = 1\n"
+                    string += "\tB_" + precursor + product + "[" + str(
+                        equation_count) + "] = X_" + str(
+                            size_product) + "[" + str(
+                                emu_intermediate[int(size_product)][product] *
+                                (size_product + 1) + j) + "]\n"
                     equation_count = equation_count + 1
 
                 #neutral loss
-                for j in range(size_neutralloss+1):
+                for j in range(size_neutralloss + 1):
                     if (equation_count >= mrm_count):
                         break
-                    for i in range(size_product+1):
+                    for i in range(size_product + 1):
                         #print i, j, mdv_matrix[i][j]
                         if (mdv_matrix[i][i + j] != ''):
-                            string += "\tA_" + precursor + product+"[" + str(equation_count * (mrm_count) + mdv_matrix[i][i + j]) + "] = 1\n"
-                    string += "\tB_" + precursor + product+"[" + str(equation_count )+ "] = X_"+str(size_neutralloss)+"[" + str(emu_intermediate[int(size_neutralloss)][neutralloss] * (size_neutralloss + 1) + j)+"]\n"
+                            string += "\tA_" + precursor + product + "[" + str(
+                                equation_count *
+                                (mrm_count) + mdv_matrix[i][i + j]) + "] = 1\n"
+                    string += "\tB_" + precursor + product + "[" + str(
+                        equation_count
+                    ) + "] = X_" + str(size_neutralloss) + "[" + str(
+                        emu_intermediate[int(size_neutralloss)][neutralloss] *
+                        (size_neutralloss + 1) + j) + "]\n"
                     equation_count = equation_count + 1
 
-                string +="\tA_" + precursor + product + ".resize(("+str(mrm_count)+","+ str(mrm_count)+"))\n"
+                string += "\tA_" + precursor + product + ".resize((" + str(
+                    mrm_count) + "," + str(mrm_count) + "))\n"
                 string += "\tMS_" + precursor + product + " = numpy.linalg.solve(A_" + precursor + product + ", B_" + precursor + product + ")\n"
-                string += "\temu_list['" + target_fragment +"'] = [" + ','.join("MS_" + precursor + product + "["+str(x)+"]" for x in range(mrm_count)) + "]\n"
+                string += "\temu_list['" + target_fragment + "'] = [" + ','.join(
+                    "MS_" + precursor + product + "[" + str(x) + "]"
+                    for x in range(mrm_count)) + "]\n"
             #gcms
             else:
-                emus = target_emus.replace(' ','').split('+')
+                emus = target_emus.replace(' ', '').split('+')
                 # one EMU
                 if (len(emus) == 1):
                     emu = emus[0]
                     compound = compound_of_EMU(emu)
-                    size = size_of_EMU(emu);
-                    row = ["X_"+str(size)+"["+ str(emu_intermediate[int(size)][emu] * (size + 1) + x) + "]"for x in range(size + 1)]
-                    string += "\temu_list['" + target_fragment +"'] = [" + ','.join(row) + "]\n"
-                    if self.configuration['add_naturalisotope_in_calmdv'] == "yes":
-                        if not self.target_fragments[target_fragment]["formula"] == "":
+                    size = size_of_EMU(emu)
+                    row = [
+                        "X_" + str(size) + "[" +
+                        str(emu_intermediate[int(size)][emu] *
+                            (size + 1) + x) + "]" for x in range(size + 1)
+                    ]
+                    string += "\temu_list['" + target_fragment + "'] = [" + ','.join(
+                        row) + "]\n"
+                    if self.configuration[
+                            'add_naturalisotope_in_calmdv'] == "yes":
+                        if not self.target_fragments[target_fragment][
+                                "formula"] == "":
                             string += "\tmdvtemp = [" + ','.join(row) + "]\n"
                             string += "\tmdvcorrected = mdvtemp[:]\n"
                             for i in range(len(row)):
                                 textdatatemp = []
                                 for j in range(len(row)):
-                                    textdatatemp.append(str(self.target_fragments[target_fragment]['natural_isotope_addition'][i,j]) + "* mdvtemp["+str(j)+"]" )
-                                string += "\tmdvcorrected[" + str(i) +"] =" + '+'.join(textdatatemp) + "\n"
+                                    textdatatemp.append(
+                                        str(self.
+                                            target_fragments[target_fragment]
+                                            ['natural_isotope_addition'][i, j])
+                                        + "* mdvtemp[" + str(j) + "]")
+                                string += "\tmdvcorrected[" + str(
+                                    i) + "] =" + '+'.join(textdatatemp) + "\n"
 
-                            string += "\temu_list['" + target_fragment +"'] = mdvcorrected\n"
+                            string += "\temu_list['" + target_fragment + "'] = mdvcorrected\n"
 
                 # multiple EMUs
                 else:
@@ -1717,31 +2108,43 @@ class MetabolicModel:
                         for emuset in emu_list:
                             if (sum(emuset) == i):
                                 #print emuset
-                                temp_one_emu = "*".join(["X_"+str(sizeofemus[j])+"["+ str(emu_intermediate[int(sizeofemus[j])][emus[j]] * (sizeofemus[j] + 1) + emuset[j]) + "]" for j in range(len(emuset))])
+                                temp_one_emu = "*".join([
+                                    "X_" + str(sizeofemus[j]) + "[" +
+                                    str(emu_intermediate[int(sizeofemus[j])][
+                                        emus[j]] *
+                                        (sizeofemus[j] + 1) + emuset[j]) + "]"
+                                    for j in range(len(emuset))
+                                ])
                                 list_of_emuset.append(temp_one_emu)
                         row.append("+".join(list_of_emuset))
-                    string += "\temu_list['" + target_fragment +"'] = [" + ','.join(row) + "]\n"
-                    if self.configuration['add_naturalisotope_in_calmdv'] == "yes":
-                        if not self.target_fragments[target_fragment]["formula"] == "":
+                    string += "\temu_list['" + target_fragment + "'] = [" + ','.join(
+                        row) + "]\n"
+                    if self.configuration[
+                            'add_naturalisotope_in_calmdv'] == "yes":
+                        if not self.target_fragments[target_fragment][
+                                "formula"] == "":
                             string += "\tmdvtemp = [" + ','.join(row) + "]\n"
                             string += "\tmdvcorrected = mdvtemp[:]\n"
                             for i in range(len(row)):
                                 textdatatemp = []
                                 for j in range(len(row)):
-                                    textdatatemp.append(str(self.target_fragments[target_fragment]['natural_isotope_addition'][i,j]) + "* mdvtemp["+str(j)+"]" )
-                                string += "\tmdvcorrected[" + str(i) +"] =" + '+'.join(textdatatemp) + "\n"
+                                    textdatatemp.append(
+                                        str(self.
+                                            target_fragments[target_fragment]
+                                            ['natural_isotope_addition'][i, j])
+                                        + "* mdvtemp[" + str(j) + "]")
+                                string += "\tmdvcorrected[" + str(
+                                    i) + "] =" + '+'.join(textdatatemp) + "\n"
 
-                            string += "\temu_list['" + target_fragment +"'] = mdvcorrected\n"
+                            string += "\temu_list['" + target_fragment + "'] = mdvcorrected\n"
 
                 string += "\temu_list['X_list'] = X_list\n"
         #generate mdv
-        string +=  "\tmdv = []\n"
-        string +=  "\tfor emu in target_emu_list:\n"
-        string +=  "\t\tif emu in emu_list:\n"
-        string +=  "\t\t\tmdv.extend(emu_list[emu])\n"
-        string +=  "\treturn(numpy.array(mdv), emu_list)\n"
-
-
+        string += "\tmdv = []\n"
+        string += "\tfor emu in target_emu_list:\n"
+        string += "\t\tif emu in emu_list:\n"
+        string += "\t\t\tmdv.extend(emu_list[emu])\n"
+        string += "\treturn(numpy.array(mdv), emu_list)\n"
 
         ##############################
         # start making diffmdv function
@@ -1757,8 +2160,6 @@ class MetabolicModel:
         string += "def diffmdv"
         string += "(r, met, timepoints, target_emu_list, mdv_carbon_sources, y0temp = []):\n"
 
-
-
         #######################
         #
         # start making diffmdv_dxdt
@@ -1770,7 +2171,6 @@ class MetabolicModel:
         #  C-1A and C-1B were calced and then used for the construction of python
         #  script that define diffmdv_dxdt_f(t,y,p)、。
         #
-
 
         string += "\n"
         string += "\n"
@@ -1795,19 +2195,21 @@ class MetabolicModel:
         # Pointer dictionally that inditate positions of MDVs of each EMU in array y
         #
         emu_intermediates_to_p = {}
-        y_position_count = 0;
+        y_position_count = 0
         #
         # Collection of EMUs in each emu_size
         #
-        for emu_size in range(1, int(emu_size_max)+1):
+        for emu_size in range(1, int(emu_size_max) + 1):
             #
             # start position of this layer's EMU in array y
             #
             start = y_position_count
             # from hit_emu_reactionset, side of emu is equal to emu_size, only one metabolite and not carbon source.
-            emu_intermediate_of_this_layer = [x for x in hit_emu_reactionset if (size_of_EMU(x) == emu_size)
-                                                                                and (not ('+' in x))
-                                                                                and not (compound_of_EMU(x) in self.carbon_source)]
+            emu_intermediate_of_this_layer = [
+                x for x in hit_emu_reactionset
+                if (size_of_EMU(x) == emu_size) and (not ('+' in x))
+                and not (compound_of_EMU(x) in self.carbon_source)
+            ]
             emu_intermediate_of_this_layer.sort()
             #
             # Continue if there is no EMU
@@ -1821,7 +2223,7 @@ class MetabolicModel:
                 emu_intermediates_to_p[emu] = y_position_count
                 y_position_count = y_position_count + emu_size + 1
             for i, emu in enumerate(emu_intermediate_of_this_layer):
-                for num in range(int(emu_size)+1):
+                for num in range(int(emu_size) + 1):
                     self.emu_order_in_y.append((emu, num))
 
             #
@@ -1833,11 +2235,13 @@ class MetabolicModel:
             # X_1 = numpy_array(y[100:200])
             #
             string += "\t\tX_"
-            string_temp = str(emu_size) + " = numpy.array(y[" + str(start) +":"+ str(end)+ "])"
+            string_temp = str(emu_size) + " = numpy.array(y[" + str(
+                start) + ":" + str(end) + "])"
             string += string_temp
             string += "\n"
             cython_string += "\t\tX_"
-            cython_string_temp = str(emu_size) + " = numpy.array(y[" + str(start) +":"+ str(end)+ "])"
+            cython_string_temp = str(emu_size) + " = numpy.array(y[" + str(
+                start) + ":" + str(end) + "])"
             cython_string += cython_string_temp
             cython_string += "\n"
             #
@@ -1849,13 +2253,15 @@ class MetabolicModel:
         #
         # relationship between flux and array p
         #
-        p_position_count = 0;
+        p_position_count = 0
         for i in range(len(self.reaction_ids)):
             #
             # r1 = p[0]
             #
-            string += "\t\t" + self.reaction_ids[i] + " = p[" + str(p_position_count) + "]\n"
-            cython_string += "\t\t" + self.reaction_ids[i] + " = p[" + str(p_position_count) + "]\n"
+            string += "\t\t" + self.reaction_ids[i] + " = p[" + str(
+                p_position_count) + "]\n"
+            cython_string += "\t\t" + self.reaction_ids[i] + " = p[" + str(
+                p_position_count) + "]\n"
             p_position_count = p_position_count + 1
 
         #
@@ -1865,8 +2271,10 @@ class MetabolicModel:
             #
             # Cit = p[0]
             #
-            string += "\t\t" + metabolite + " = p[" + str(p_position_count) + "]\n"
-            cython_string += "\t\t" + metabolite + " = p[" + str(p_position_count) + "]\n"
+            string += "\t\t" + metabolite + " = p[" + str(
+                p_position_count) + "]\n"
+            cython_string += "\t\t" + metabolite + " = p[" + str(
+                p_position_count) + "]\n"
             p_position_count = p_position_count + 1
         #
         # relationship between reversible and array p
@@ -1888,20 +2296,26 @@ class MetabolicModel:
         #
         cs_position_count = 0
 
-        for emu_size in range(1, int(emu_size_max)+1):
+        for emu_size in range(1, int(emu_size_max) + 1):
             #
             # Carbon source in this laryer
             #
-            emu_sourse_of_this_layer = [x for x in hit_emuset if (size_of_EMU(x) == emu_size)
-                                                                                and (compound_of_EMU(x) in self.carbon_source)]
+            emu_sourse_of_this_layer = [
+                x for x in hit_emuset if (size_of_EMU(x) == emu_size) and (
+                    compound_of_EMU(x) in self.carbon_source)
+            ]
             emu_sourse_of_this_layer.sort()
             for emu_sourse in emu_sourse_of_this_layer:
                 emu_carbon_source_to_p[emu_sourse] = cs_position_count
                 #
                 # tmdv_carbon_sources[AcCoA_12] = p[14:16]
                 #
-                string += "\t\tmdv_carbon_sources[\""+emu_sourse+"\"] = p["+str(p_position_count)+":"+str(p_position_count + emu_size + 1)+"]\n"
-                cython_string += "\t\tmdv_carbon_sources[\""+emu_sourse+"\"] = p["+str(p_position_count)+":"+str(p_position_count + emu_size + 1)+"]\n"
+                string += "\t\tmdv_carbon_sources[\"" + emu_sourse + "\"] = p[" + str(
+                    p_position_count) + ":" + str(p_position_count + emu_size +
+                                                  1) + "]\n"
+                cython_string += "\t\tmdv_carbon_sources[\"" + emu_sourse + "\"] = p[" + str(
+                    p_position_count) + ":" + str(p_position_count + emu_size +
+                                                  1) + "]\n"
                 p_position_count = p_position_count + emu_size + 1
                 cs_position_count = cs_position_count + emu_size + 1
         #
@@ -1912,19 +2326,25 @@ class MetabolicModel:
         #　AX = BY
         # Essentially identical with that for calmdv
         #
-        for emu_size in range(1, int(emu_size_max)+1):
-            emu_intermediate_of_this_layer = [x for x in hit_emu_reactionset if (size_of_EMU(x) == emu_size)
-                                                                                and (not ('+' in x))
-                                                                                and not (compound_of_EMU(x) in self.carbon_source)]
+        for emu_size in range(1, int(emu_size_max) + 1):
+            emu_intermediate_of_this_layer = [
+                x for x in hit_emu_reactionset
+                if (size_of_EMU(x) == emu_size) and (not ('+' in x))
+                and not (compound_of_EMU(x) in self.carbon_source)
+            ]
             emu_intermediate_of_this_layer.sort()
             if len(emu_intermediate_of_this_layer) == 0:
                 continue
             emu_sourse_of_this_layer = []
-            emu_sourse_of_this_layer += [x for x in hit_emu_reactionset if (size_of_EMU(x) == emu_size)
-                                                                                and ('+' in x)]
-            emu_sourse_of_this_layer += [x for x in hit_emu_reactionset if (size_of_EMU(x) == emu_size)
-                                                                                and (not ('+' in x))
-                                                                                and (compound_of_EMU(x) in self.carbon_source)]
+            emu_sourse_of_this_layer += [
+                x for x in hit_emu_reactionset
+                if (size_of_EMU(x) == emu_size) and ('+' in x)
+            ]
+            emu_sourse_of_this_layer += [
+                x for x in hit_emu_reactionset
+                if (size_of_EMU(x) == emu_size) and (not ('+' in x)) and (
+                    compound_of_EMU(x) in self.carbon_source)
+            ]
 
             emu_sourse_of_this_layer.sort()
 
@@ -1932,17 +2352,23 @@ class MetabolicModel:
             #
             for i in range(len(emu_intermediate_of_this_layer)):
                 if emu_size in emu_intermediate:
-                    emu_intermediate[emu_size].setdefault(emu_intermediate_of_this_layer[i],i)
+                    emu_intermediate[emu_size].setdefault(
+                        emu_intermediate_of_this_layer[i], i)
                 else:
-                    emu_intermediate[emu_size] = {emu_intermediate_of_this_layer[i]:i}
+                    emu_intermediate[emu_size] = {
+                        emu_intermediate_of_this_layer[i]: i
+                    }
         #Out put A
             size_i = len(emu_intermediate_of_this_layer)
             size_s = len(emu_sourse_of_this_layer)
             #
             # A_1 = numpy.zero((50,))
             #
-            string += "\t\tA_" + str(emu_size) + " =  numpy.zeros(("+str(size_i * size_i)+",))\n"
-            cython_string += "\t\tA_" + str(emu_size) + " =  numpy.zeros(("+str(size_i * size_i)+",))\n"
+            string += "\t\tA_" + str(emu_size) + " =  numpy.zeros((" + str(
+                size_i * size_i) + ",))\n"
+            cython_string += "\t\tA_" + str(
+                emu_size) + " =  numpy.zeros((" + str(
+                    size_i * size_i) + ",))\n"
             for product in emu_intermediate_of_this_layer:
                 for substrate in emu_intermediate_of_this_layer:
                     cell = []
@@ -1950,70 +2376,128 @@ class MetabolicModel:
                         if substrate == product:
                             for reaction_id in matrix[product].get(substrate):
                                 if '*' in reaction_id:
-                                    cell.append(reaction_id.replace("*", "") + "/ 2.0")
+                                    cell.append(
+                                        reaction_id.replace("*", "") + "/ 2.0")
                                 else:
                                     cell.append(reaction_id)
                             cell_string = "-1.0 * (" + ' + '.join(cell) + ")"
-                            string += "\t\tA_" + str(emu_size) + "["+str(emu_intermediate_of_this_layer.index(product) * size_i + emu_intermediate_of_this_layer.index(substrate))+"] = " + cell_string + "\n"
-                            cython_string += "\t\tA_" + str(emu_size) + "["+str(emu_intermediate_of_this_layer.index(product) * size_i + emu_intermediate_of_this_layer.index(substrate))+"] = " + cell_string + "\n"
+                            string += "\t\tA_" + str(emu_size) + "[" + str(
+                                emu_intermediate_of_this_layer.index(product) *
+                                size_i + emu_intermediate_of_this_layer.index(
+                                    substrate)) + "] = " + cell_string + "\n"
+                            cython_string += "\t\tA_" + str(
+                                emu_size
+                            ) + "[" + str(
+                                emu_intermediate_of_this_layer.index(product) *
+                                size_i + emu_intermediate_of_this_layer.index(
+                                    substrate)) + "] = " + cell_string + "\n"
 
                             if self.configuration['callbacklevel'] == 7:
-                                print(product,'\t',substrate, "\tA_" + str(emu_size) + "["+str(emu_intermediate_of_this_layer.index(product) * size_i + emu_intermediate_of_this_layer.index(substrate))+"] = " + cell_string)
+                                print(
+                                    product, '\t', substrate,
+                                    "\tA_" + str(emu_size) + "[" + str(
+                                        emu_intermediate_of_this_layer.index(
+                                            product) * size_i +
+                                        emu_intermediate_of_this_layer.index(
+                                            substrate)) + "] = " + cell_string)
 
                         else:
                             for reaction_id in matrix[product].get(substrate):
                                 if '*' in reaction_id:
-                                    cell.append("0.5 * " + reaction_id.replace("*", ""))
+                                    cell.append("0.5 * " +
+                                                reaction_id.replace("*", ""))
                                 else:
                                     cell.append(reaction_id)
                             cell_string = ' + '.join(cell)
-                            string += "\t\tA_" + str(emu_size) + "["+str(emu_intermediate_of_this_layer.index(product) * size_i + emu_intermediate_of_this_layer.index(substrate))+"] = " + cell_string + "\n"
-                            cython_string += "\t\tA_" + str(emu_size) + "["+str(emu_intermediate_of_this_layer.index(product) * size_i + emu_intermediate_of_this_layer.index(substrate))+"] = " + cell_string + "\n"
+                            string += "\t\tA_" + str(emu_size) + "[" + str(
+                                emu_intermediate_of_this_layer.index(product) *
+                                size_i + emu_intermediate_of_this_layer.index(
+                                    substrate)) + "] = " + cell_string + "\n"
+                            cython_string += "\t\tA_" + str(
+                                emu_size
+                            ) + "[" + str(
+                                emu_intermediate_of_this_layer.index(product) *
+                                size_i + emu_intermediate_of_this_layer.index(
+                                    substrate)) + "] = " + cell_string + "\n"
 
                             if self.configuration['callbacklevel'] == 7:
-                                print(product,'\t',substrate, "\tA_" + str(emu_size) + "["+str(emu_intermediate_of_this_layer.index(product) * size_i + emu_intermediate_of_this_layer.index(substrate))+"] = " + cell_string)
+                                print(
+                                    product, '\t', substrate,
+                                    "\tA_" + str(emu_size) + "[" + str(
+                                        emu_intermediate_of_this_layer.index(
+                                            product) * size_i +
+                                        emu_intermediate_of_this_layer.index(
+                                            substrate)) + "] = " + cell_string)
             #
             # Risize A A_1.resize((10,5))
             #
-            string += "\t\tA_" + str(emu_size) + ".resize(("+str(size_i)+","+ str(size_i)+"))\n"
-            cython_string += "\t\tA_" + str(emu_size) + ".resize(("+str(size_i)+","+ str(size_i)+"))\n"
+            string += "\t\tA_" + str(emu_size) + ".resize((" + str(
+                size_i) + "," + str(size_i) + "))\n"
+            cython_string += "\t\tA_" + str(emu_size) + ".resize((" + str(
+                size_i) + "," + str(size_i) + "))\n"
 
             #
             # Resice X X_1.resize((10,5))
             #
-            string += "\t\tX_" + str(emu_size) + ".resize(("+str(size_i)+","+ str(emu_size + 1)+"))\n"
-            cython_string += "\t\tX_" + str(emu_size) + ".resize(("+str(size_i)+","+ str(emu_size + 1)+"))\n"
+            string += "\t\tX_" + str(emu_size) + ".resize((" + str(
+                size_i) + "," + str(emu_size + 1) + "))\n"
+            cython_string += "\t\tX_" + str(emu_size) + ".resize((" + str(
+                size_i) + "," + str(emu_size + 1) + "))\n"
             #
             # mode = func
             #
-            string += "\t\tstring += '\\tX_" + str(emu_size) + ".resize(("+str(size_i)+","+ str(emu_size + 1)+"))\\n'\n"
-        #Output C
+            string += "\t\tstring += '\\tX_" + str(
+                emu_size) + ".resize((" + str(size_i) + "," + str(
+                    emu_size + 1) + "))\\n'\n"
+            #Output C
             size_i = len(emu_intermediate_of_this_layer)
             size_s = len(emu_sourse_of_this_layer)
-            string += "\t\tC_" + str(emu_size) + " =  numpy.zeros(("+str(size_i * size_i)+",))\n"
-            cython_string += "\t\tC_" + str(emu_size) + " =  numpy.zeros(("+str(size_i * size_i)+",))\n"
+            string += "\t\tC_" + str(emu_size) + " =  numpy.zeros((" + str(
+                size_i * size_i) + ",))\n"
+            cython_string += "\t\tC_" + str(
+                emu_size) + " =  numpy.zeros((" + str(
+                    size_i * size_i) + ",))\n"
             for product in emu_intermediate_of_this_layer:
                 for substrate in emu_intermediate_of_this_layer:
                     cell = []
                     if substrate in matrix[product]:
                         if substrate == product:
                             metabolite = compound_of_EMU(product)
-                            cell_string = "1.0 / " +  metabolite
-                            string += "\t\tC_" + str(emu_size) + "["+str(emu_intermediate_of_this_layer.index(product) * size_i + emu_intermediate_of_this_layer.index(substrate))+"] = " + cell_string + "\n"
-                            cython_string += "\t\tC_" + str(emu_size) + "["+str(emu_intermediate_of_this_layer.index(product) * size_i + emu_intermediate_of_this_layer.index(substrate))+"] = " + cell_string + "\n"
+                            cell_string = "1.0 / " + metabolite
+                            string += "\t\tC_" + str(emu_size) + "[" + str(
+                                emu_intermediate_of_this_layer.index(product) *
+                                size_i + emu_intermediate_of_this_layer.index(
+                                    substrate)) + "] = " + cell_string + "\n"
+                            cython_string += "\t\tC_" + str(
+                                emu_size
+                            ) + "[" + str(
+                                emu_intermediate_of_this_layer.index(product) *
+                                size_i + emu_intermediate_of_this_layer.index(
+                                    substrate)) + "] = " + cell_string + "\n"
 
                             if self.configuration['callbacklevel'] == 7:
-                                print(product,'\t',substrate, "\tA_" + str(emu_size) + "["+str(emu_intermediate_of_this_layer.index(product) * size_i + emu_intermediate_of_this_layer.index(substrate))+"] = " + cell_string )
+                                print(
+                                    product, '\t', substrate,
+                                    "\tA_" + str(emu_size) + "[" + str(
+                                        emu_intermediate_of_this_layer.index(
+                                            product) * size_i +
+                                        emu_intermediate_of_this_layer.index(
+                                            substrate)) + "] = " + cell_string)
 
                         else:
                             pass
 
-            string += "\t\tC_" + str(emu_size) + ".resize(("+str(size_i)+","+ str(size_i)+"))\n"
-            cython_string += "\t\tC_" + str(emu_size) + ".resize(("+str(size_i)+","+ str(size_i)+"))\n"
+            string += "\t\tC_" + str(emu_size) + ".resize((" + str(
+                size_i) + "," + str(size_i) + "))\n"
+            cython_string += "\t\tC_" + str(emu_size) + ".resize((" + str(
+                size_i) + "," + str(size_i) + "))\n"
 
-        #Output B
-            string += "\t\tB_" + str(emu_size) + " =  numpy.zeros(("+str(size_i * size_s)+",))\n"
-            cython_string += "\t\tB_" + str(emu_size) + " =  numpy.zeros(("+str(size_i * size_s)+",))\n"
+            #Output B
+            string += "\t\tB_" + str(emu_size) + " =  numpy.zeros((" + str(
+                size_i * size_s) + ",))\n"
+            cython_string += "\t\tB_" + str(
+                emu_size) + " =  numpy.zeros((" + str(
+                    size_i * size_s) + ",))\n"
             for product in emu_intermediate_of_this_layer:
                 for substrate in emu_sourse_of_this_layer:
                     cell = []
@@ -2021,90 +2505,169 @@ class MetabolicModel:
                         if substrate == product:
                             for reaction_id in matrix[product].get(substrate):
                                 if '*' in reaction_id:
-                                    cell.append("-0.5 * " + reaction_id.replace("*", ""))
+                                    cell.append("-0.5 * " +
+                                                reaction_id.replace("*", ""))
                                 else:
                                     cell.append("-1.0 * " + reaction_id)
                         else:
                             for reaction_id in matrix[product].get(substrate):
                                 if '*' in reaction_id:
-                                    cell.append("-0.5 * " + reaction_id.replace("*", ""))
+                                    cell.append("-0.5 * " +
+                                                reaction_id.replace("*", ""))
                                 else:
                                     cell.append("-1.0 * " + reaction_id)
                     if len(cell) != 0:
                         cell_string = ' + '.join(cell)
                         if self.configuration['callbacklevel'] == 7:
-                            print(product,'\t',substrate,"\tB_" + str(emu_size) + "["+str(emu_intermediate_of_this_layer.index(product) * size_s + emu_sourse_of_this_layer.index(substrate))+"] = " + cell_string)
+                            print(
+                                product, '\t', substrate,
+                                "\tB_" + str(emu_size) + "[" + str(
+                                    emu_intermediate_of_this_layer.index(
+                                        product) * size_s +
+                                    emu_sourse_of_this_layer.index(substrate))
+                                + "] = " + cell_string)
 
-                        string += "\t\tB_" + str(emu_size) + "["+str(emu_intermediate_of_this_layer.index(product) * size_s + emu_sourse_of_this_layer.index(substrate))+"] = " + cell_string + "\n"
-                        cython_string += "\t\tB_" + str(emu_size) + "["+str(emu_intermediate_of_this_layer.index(product) * size_s + emu_sourse_of_this_layer.index(substrate))+"] = " + cell_string + "\n"
+                        string += "\t\tB_" + str(emu_size) + "[" + str(
+                            emu_intermediate_of_this_layer.index(product) *
+                            size_s + emu_sourse_of_this_layer.index(substrate)
+                        ) + "] = " + cell_string + "\n"
+                        cython_string += "\t\tB_" + str(emu_size) + "[" + str(
+                            emu_intermediate_of_this_layer.index(product) *
+                            size_s + emu_sourse_of_this_layer.index(substrate)
+                        ) + "] = " + cell_string + "\n"
 
-            cython_string += "\t\tB_" + str(emu_size) + ".resize(("+str(size_i)+","+ str(size_s)+"))\n"
+            cython_string += "\t\tB_" + str(emu_size) + ".resize((" + str(
+                size_i) + "," + str(size_s) + "))\n"
 
-            string += "\t\tB_" + str(emu_size) + ".resize(("+str(size_i)+","+ str(size_s)+"))\n"
-        #Output Y
-            string += "\t\tY_" + str(emu_size) + " =  numpy.zeros(("+str(len(emu_sourse_of_this_layer) * (emu_size + 1))+",))\n"
-            cython_string += "\t\tY_" + str(emu_size) + " =  numpy.zeros(("+str(len(emu_sourse_of_this_layer) * (emu_size + 1))+",))\n"
-            string += "\t\tstring += '\\tY_" + str(emu_size) + " =  numpy.zeros(("+str(len(emu_sourse_of_this_layer) * (emu_size + 1))+",))\\n'\n"
-            for substrate in emu_sourse_of_this_layer:#炭素源あるいは一つ前のそうから
+            string += "\t\tB_" + str(emu_size) + ".resize((" + str(
+                size_i) + "," + str(size_s) + "))\n"
+            #Output Y
+            string += "\t\tY_" + str(emu_size) + " =  numpy.zeros((" + str(
+                len(emu_sourse_of_this_layer) * (emu_size + 1)) + ",))\n"
+            cython_string += "\t\tY_" + str(
+                emu_size) + " =  numpy.zeros((" + str(
+                    len(emu_sourse_of_this_layer) * (emu_size + 1)) + ",))\n"
+            string += "\t\tstring += '\\tY_" + str(
+                emu_size) + " =  numpy.zeros((" + str(
+                    len(emu_sourse_of_this_layer) *
+                    (emu_size + 1)) + ",))\\n'\n"
+            for substrate in emu_sourse_of_this_layer:  #炭素源あるいは一つ前のそうから
                 row = []
                 #print substrate
 
                 if '+' in substrate:
-                    subs_matrix=[]
-                    subs_matrix_forfunc=[]
-                    list_emusize_plus1=[]
+                    subs_matrix = []
+                    subs_matrix_forfunc = []
+                    list_emusize_plus1 = []
                     n = len(substrate.split('+'))
                     for subs in substrate.split('+'):
-                        list_emusize_plus1.append(size_of_EMU(subs)+1)
+                        list_emusize_plus1.append(size_of_EMU(subs) + 1)
 
                         if compound_of_EMU(subs) in self.carbon_source:
                             #sub1_list = generate_carbonsource_MID(sub1)
                             compound = compound_of_EMU(subs)
-                            size = size_of_EMU(subs);
-                            subs_matrix.append(["mdv_carbon_sources[\"" + subs + "\"][" + str(x) + "]" for x in range(size+1)])
-                            subs_matrix_forfunc.append(["'+str(mdv_carbon_sources[\"" + subs + "\"][" + str(x) + "])+'" for x in range(size+1)])
+                            size = size_of_EMU(subs)
+                            subs_matrix.append([
+                                "mdv_carbon_sources[\"" + subs + "\"][" +
+                                str(x) + "]" for x in range(size + 1)
+                            ])
+                            subs_matrix_forfunc.append([
+                                "'+str(mdv_carbon_sources[\"" + subs + "\"][" +
+                                str(x) + "])+'" for x in range(size + 1)
+                            ])
 
                         else:
                             compound = compound_of_EMU(subs)
-                            size = size_of_EMU(subs);
-                            subs_matrix.append(["y[" + str(emu_intermediates_to_p[subs]+x) +  "]" for x in range(size+1)])
-                            subs_matrix_forfunc.append(["y[" + str(emu_intermediates_to_p[subs]+x) + "]" for x in range(size+1)])
+                            size = size_of_EMU(subs)
+                            subs_matrix.append([
+                                "y[" + str(emu_intermediates_to_p[subs] + x) +
+                                "]" for x in range(size + 1)
+                            ])
+                            subs_matrix_forfunc.append([
+                                "y[" + str(emu_intermediates_to_p[subs] + x) +
+                                "]" for x in range(size + 1)
+                            ])
 
-
-
-                    sum_length=0
+                    sum_length = 0
                     for subs_list in subs_matrix:
-                        sum_length=sum_length +len(subs_list)
+                        sum_length = sum_length + len(subs_list)
                     #空のリストのリストを作製しておく。
-                    equation = [[] for x in range(sum_length)];
-                    equation_forfunc = [[] for x in range(sum_length)];
-                    conbinaion_list=permute(list_emusize_plus1)
+                    equation = [[] for x in range(sum_length)]
+                    equation_forfunc = [[] for x in range(sum_length)]
+                    conbinaion_list = permute(list_emusize_plus1)
                     for conbination in conbinaion_list:
-                       equation[sum(conbination)].extend([("*").join([str(subs_matrix[i][conbination[i]]) for i in range(len(conbination))])])
-                       equation_forfunc[sum(conbination)].extend([("*").join([str(subs_matrix_forfunc[i][conbination[i]]) for i in range(len(conbination))])])
+                        equation[sum(conbination)].extend([("*").join([
+                            str(subs_matrix[i][conbination[i]])
+                            for i in range(len(conbination))
+                        ])])
+                        equation_forfunc[sum(conbination)].extend([("*").join([
+                            str(subs_matrix_forfunc[i][conbination[i]])
+                            for i in range(len(conbination))
+                        ])])
 
-                    for numberofisotope in range (len(equation)-n+1):
+                    for numberofisotope in range(len(equation) - n + 1):
                         if self.configuration['callbacklevel'] == 7:
-                            print(substrate ,'\t','',"\tY_" + str(emu_size) + "["+str(emu_sourse_of_this_layer.index(substrate)*(emu_size + 1) + numberofisotope)+"] = " + '+'.join(equation[numberofisotope]))
-                        string += "\t\tY_" + str(emu_size) + "["+str(emu_sourse_of_this_layer.index(substrate)*(emu_size + 1) + numberofisotope)+"] = " + '+'.join(equation[numberofisotope]) + "\n"
-                        cython_string += "\t\tY_" + str(emu_size) + "["+str(emu_sourse_of_this_layer.index(substrate)*(emu_size + 1) + numberofisotope)+"] = " + '+'.join(equation[numberofisotope]) + "\n"
-                        string += "\t\tstring += '\\tY_" + str(emu_size) + "["+str(emu_sourse_of_this_layer.index(substrate)*(emu_size + 1) + numberofisotope)+"] = " + '+'.join(equation_forfunc[numberofisotope]) + "\\n'\n"
+                            print(
+                                substrate, '\t', '',
+                                "\tY_" + str(emu_size) + "[" + str(
+                                    emu_sourse_of_this_layer.index(substrate) *
+                                    (emu_size + 1) + numberofisotope) +
+                                "] = " + '+'.join(equation[numberofisotope]))
+                        string += "\t\tY_" + str(emu_size) + "[" + str(
+                            emu_sourse_of_this_layer.index(substrate) *
+                            (emu_size + 1) +
+                            numberofisotope) + "] = " + '+'.join(
+                                equation[numberofisotope]) + "\n"
+                        cython_string += "\t\tY_" + str(emu_size) + "[" + str(
+                            emu_sourse_of_this_layer.index(substrate) *
+                            (emu_size + 1) +
+                            numberofisotope) + "] = " + '+'.join(
+                                equation[numberofisotope]) + "\n"
+                        string += "\t\tstring += '\\tY_" + str(
+                            emu_size) + "[" + str(
+                                emu_sourse_of_this_layer.index(substrate) *
+                                (emu_size + 1) + numberofisotope
+                            ) + "] = " + '+'.join(
+                                equation_forfunc[numberofisotope]) + "\\n'\n"
 
                 else:
                     compound = compound_of_EMU(substrate)
-                    size = size_of_EMU(substrate);
-                    for numberofisotope in range(size+1):
+                    size = size_of_EMU(substrate)
+                    for numberofisotope in range(size + 1):
                         if self.configuration['callbacklevel'] == 7:
-                            print(substrate ,'\t','',"\tY_" + str(emu_size) + "["+str(emu_sourse_of_this_layer.index(substrate)*(emu_size + 1) + numberofisotope)+"] = " + "mdv_carbon_sources[\"" + substrate + "\"][" + str(numberofisotope) + "]" )
-                        string += "\t\tY_" + str(emu_size) + "["+str(emu_sourse_of_this_layer.index(substrate)*(emu_size + 1) + numberofisotope)+"] = " + "mdv_carbon_sources[\"" + substrate + "\"][" + str(numberofisotope) + "]" + "\n"
-                        cython_string += "\t\tY_" + str(emu_size) + "["+str(emu_sourse_of_this_layer.index(substrate)*(emu_size + 1) + numberofisotope)+"] = " + "mdv_carbon_sources[\"" + substrate + "\"][" + str(numberofisotope) + "]" + "\n"
-                        string += "\t\tstring += '\\tY_" + str(emu_size) + "["+str(emu_sourse_of_this_layer.index(substrate)*(emu_size + 1) + numberofisotope)+"] = " + "'+str(mdv_carbon_sources[\"" + substrate + "\"][" + str(numberofisotope) + "])+'" + "\\n'\n"
+                            print(
+                                substrate, '\t', '',
+                                "\tY_" + str(emu_size) + "[" + str(
+                                    emu_sourse_of_this_layer.index(substrate) *
+                                    (emu_size + 1) + numberofisotope) +
+                                "] = " + "mdv_carbon_sources[\"" + substrate +
+                                "\"][" + str(numberofisotope) + "]")
+                        string += "\t\tY_" + str(emu_size) + "[" + str(
+                            emu_sourse_of_this_layer.index(substrate) *
+                            (emu_size + 1) + numberofisotope
+                        ) + "] = " + "mdv_carbon_sources[\"" + substrate + "\"][" + str(
+                            numberofisotope) + "]" + "\n"
+                        cython_string += "\t\tY_" + str(emu_size) + "[" + str(
+                            emu_sourse_of_this_layer.index(substrate) *
+                            (emu_size + 1) + numberofisotope
+                        ) + "] = " + "mdv_carbon_sources[\"" + substrate + "\"][" + str(
+                            numberofisotope) + "]" + "\n"
+                        string += "\t\tstring += '\\tY_" + str(
+                            emu_size
+                        ) + "[" + str(
+                            emu_sourse_of_this_layer.index(substrate) *
+                            (emu_size + 1) + numberofisotope
+                        ) + "] = " + "'+str(mdv_carbon_sources[\"" + substrate + "\"][" + str(
+                            numberofisotope) + "])+'" + "\\n'\n"
 
+            string += "\t\tY_" + str(emu_size) + ".resize((" + str(
+                size_s) + "," + str(emu_size + 1) + "))\n"
+            cython_string += "\t\tY_" + str(emu_size) + ".resize((" + str(
+                size_s) + "," + str(emu_size + 1) + "))\n"
 
-            string += "\t\tY_" + str(emu_size) + ".resize(("+str(size_s)+","+ str(emu_size + 1)+"))\n"
-            cython_string += "\t\tY_" + str(emu_size) + ".resize(("+str(size_s)+","+ str(emu_size + 1)+"))\n"
-
-            string += "\t\tstring += '\\tY_" + str(emu_size) + ".resize(("+str(size_s)+","+ str(emu_size + 1)+"))\\n'\n"
+            string += "\t\tstring += '\\tY_" + str(
+                emu_size) + ".resize((" + str(size_s) + "," + str(
+                    emu_size + 1) + "))\\n'\n"
             #
             # calc dx
             # Representative python script generated when mode == 'func'
@@ -2119,42 +2682,65 @@ class MetabolicModel:
             #       string += '\\tCA_1['+str(i)+'] = '+str(temp[i])+'\\n'
             #   string += '\\tCA_1.resize((50,20))\\n'
             string += "\t\tif mode == 'func':\n"
-            string += "\t\t\tCA_"+str(emu_size)+"= numpy.dot(C_"+str(emu_size)+",A_"+str(emu_size)+")\n"
-            string += "\t\t\tCB_"+str(emu_size)+"= numpy.dot(C_"+str(emu_size)+",B_"+str(emu_size)+")\n"
-            string += "\t\t\ttemp = numpy.ravel(CA_"+str(emu_size)+")\n"
-            string += "\t\t\tstring += '\\tCA_"+str(emu_size)+" = numpy.zeros('+str(len(temp))+')\\n'\n"
+            string += "\t\t\tCA_" + str(emu_size) + "= numpy.dot(C_" + str(
+                emu_size) + ",A_" + str(emu_size) + ")\n"
+            string += "\t\t\tCB_" + str(emu_size) + "= numpy.dot(C_" + str(
+                emu_size) + ",B_" + str(emu_size) + ")\n"
+            string += "\t\t\ttemp = numpy.ravel(CA_" + str(emu_size) + ")\n"
+            string += "\t\t\tstring += '\\tCA_" + str(
+                emu_size) + " = numpy.zeros('+str(len(temp))+')\\n'\n"
             string += "\t\t\tfor i in range(len(temp)):\n"
             string += "\t\t\t\tif temp[i] == 0.0:\n"
             string += "\t\t\t\t\tcontinue\n"
-            string += "\t\t\t\tstring += '\\tCA_"+str(emu_size)+"['+str(i)+'] = '+str(temp[i])+'\\n'\n"
-            string += "\t\t\tstring += '\\tCA_"+str(emu_size)+".resize(("+str(size_i)+","+str(size_i)+"))\\n'\n"
+            string += "\t\t\t\tstring += '\\tCA_" + str(
+                emu_size) + "['+str(i)+'] = '+str(temp[i])+'\\n'\n"
+            string += "\t\t\tstring += '\\tCA_" + str(
+                emu_size) + ".resize((" + str(size_i) + "," + str(
+                    size_i) + "))\\n'\n"
             #
             # Repeat for CB
             #
-            string += "\t\t\ttemp = numpy.ravel(CB_"+str(emu_size)+")\n"
-            string += "\t\t\tstring += '\\tCB_"+str(emu_size)+" = numpy.zeros('+str(len(temp))+')\\n'\n"
+            string += "\t\t\ttemp = numpy.ravel(CB_" + str(emu_size) + ")\n"
+            string += "\t\t\tstring += '\\tCB_" + str(
+                emu_size) + " = numpy.zeros('+str(len(temp))+')\\n'\n"
             string += "\t\t\tfor i in range(len(temp)):\n"
             string += "\t\t\t\tif temp[i] == 0.0:\n"
             string += "\t\t\t\t\tcontinue\n"
-            string += "\t\t\t\tstring += '\\tCB_"+str(emu_size)+"['+str(i)+'] = '+str(temp[i])+'\\n'\n"
-            string += "\t\t\tstring += '\\tCB_"+str(emu_size)+".resize(("+str(size_i)+","+str(size_s)+"))\\n'\n"
+            string += "\t\t\t\tstring += '\\tCB_" + str(
+                emu_size) + "['+str(i)+'] = '+str(temp[i])+'\\n'\n"
+            string += "\t\t\tstring += '\\tCB_" + str(
+                emu_size) + ".resize((" + str(size_i) + "," + str(
+                    size_s) + "))\\n'\n"
             #
             # string += '\\tdx_1 = numpy.dot(CA_1,X_1) - numpy.dot(CB_1,Y_1)\\n'
             # string += '\\tdx = numpy.append(dx, numpy.ravel(dx_1))\\n'
             #
-            string += "\t\t\tstring += '\\tdx_"+str(emu_size)+" = numpy.dot(CA_"+str(emu_size)+",X_"+str(emu_size)+") - numpy.dot(CB_"+str(emu_size)+",Y_"+str(emu_size)+")\\n'\n"
-            string += "\t\t\tstring += '\\tdx = numpy.append(dx, numpy.ravel(dx_"+str(emu_size)+"))\\n'\n"
+            string += "\t\t\tstring += '\\tdx_" + str(
+                emu_size) + " = numpy.dot(CA_" + str(emu_size) + ",X_" + str(
+                    emu_size) + ") - numpy.dot(CB_" + str(
+                        emu_size) + ",Y_" + str(emu_size) + ")\\n'\n"
+            string += "\t\t\tstring += '\\tdx = numpy.append(dx, numpy.ravel(dx_" + str(
+                emu_size) + "))\\n'\n"
             #
             # dx_1 = numpy.dot(C_1, (numpy.dot(A_1,X_1) - numpy.dot(B_1,Y_1)))
             # dx_1.tolist()
             # dx.extend([x for sublist in dx_1 for x in sublist])
             #
-            string += "\t\tdx_"+str(emu_size)+" = numpy.dot(C_"+str(emu_size) +", (numpy.dot(A_"+str(emu_size)+",X_"+str(emu_size)+") - numpy.dot(B_"+str(emu_size)+",Y_"+str(emu_size)+")))\n"
-            string += "\t\tdx_"+str(emu_size)+".tolist()\n"
-            string += "\t\tdx.extend([x for sublist in dx_"+str(emu_size)+" for x in sublist])\n"
-            cython_string += "\t\tdx_"+str(emu_size)+" = numpy.dot(C_"+str(emu_size) +", (numpy.dot(A_"+str(emu_size)+",X_"+str(emu_size)+") - numpy.dot(B_"+str(emu_size)+",Y_"+str(emu_size)+")))\n"
-            cython_string += "\t\tdx_"+str(emu_size)+".tolist()\n"
-            cython_string += "\t\tdx.extend([x for sublist in dx_"+str(emu_size)+" for x in sublist])\n"
+            string += "\t\tdx_" + str(emu_size) + " = numpy.dot(C_" + str(
+                emu_size) + ", (numpy.dot(A_" + str(emu_size) + ",X_" + str(
+                    emu_size) + ") - numpy.dot(B_" + str(
+                        emu_size) + ",Y_" + str(emu_size) + ")))\n"
+            string += "\t\tdx_" + str(emu_size) + ".tolist()\n"
+            string += "\t\tdx.extend([x for sublist in dx_" + str(
+                emu_size) + " for x in sublist])\n"
+            cython_string += "\t\tdx_" + str(
+                emu_size
+            ) + " = numpy.dot(C_" + str(emu_size) + ", (numpy.dot(A_" + str(
+                emu_size) + ",X_" + str(emu_size) + ") - numpy.dot(B_" + str(
+                    emu_size) + ",Y_" + str(emu_size) + ")))\n"
+            cython_string += "\t\tdx_" + str(emu_size) + ".tolist()\n"
+            cython_string += "\t\tdx.extend([x for sublist in dx_" + str(
+                emu_size) + " for x in sublist])\n"
 
         #
         # return
@@ -2164,7 +2750,6 @@ class MetabolicModel:
         string += "\t\t\treturn(string)\n"
         string += "\t\treturn(dx)\n"
         cython_string += "\t\treturn(dx)\n"
-
 
         #
         #return making diffmdc
@@ -2185,7 +2770,7 @@ class MetabolicModel:
         #
         # Set MDV
         # csp = [0.0] * 50
-        string += "\tcsp = [0.0] * "+str(size_of_p)+"\n"
+        string += "\tcsp = [0.0] * " + str(size_of_p) + "\n"
         #
         # Generate csp from emu_carbon_source_to_p
         #
@@ -2193,13 +2778,15 @@ class MetabolicModel:
             # Check EMU size
             size = size_of_EMU(carbon_source)
             # csp[10:15] = list(mdv_carbon_sources["AcCoA_12"])
-            string += "\tcsp["+str(position)+":"+ str(position + size + 1)+"] = list(mdv_carbon_sources[\""+carbon_source+"\"])\n"
+            string += "\tcsp[" + str(position) + ":" + str(
+                position + size + 1
+            ) + "] = list(mdv_carbon_sources[\"" + carbon_source + "\"])\n"
         # p0.extend(csp)
         string += "\tp0.extend(csp)\n"
         #
         # Initial EMU
         # y0 = [0.0] * 300
-        string += "\ty0 = [0.0] * "+str(size_of_y)+"\n"
+        string += "\ty0 = [0.0] * " + str(size_of_y) + "\n"
         #
         # Generate initial MDV from emu_intermediates_to_p
         # Considering natural isotope。
@@ -2216,25 +2803,27 @@ class MetabolicModel:
             H1ratio = 0.0107
 
             (stem, pos) = emu.split("_")
-            pos = pos.replace(':','') #200517 ver 056 modified 炭素移動の表記が変わったので
+            pos = pos.replace(':', '')  #200517 ver 056 modified 炭素移動の表記が変わったので
             number_of_carbons = len(pos)
             #string += "\ty0["+str(position)+"] = 1.0\n"
-            string += "\ty0["+str(position)+"] = "
+            string += "\ty0[" + str(position) + "] = "
             string += str(H0ratio**number_of_carbons)
-            string += "#"+str(emu)+" "+str(position)
+            string += "#" + str(emu) + " " + str(position)
             string += "\n"
-            string += "\ty0["+str(position+1)+"] = "
-            string += str((H0ratio**(number_of_carbons-1.0))*H1ratio*number_of_carbons)
+            string += "\ty0[" + str(position + 1) + "] = "
+            string += str((H0ratio**(number_of_carbons - 1.0)) * H1ratio *
+                          number_of_carbons)
             string += "\n"
             if number_of_carbons > 2:
-                string += "\ty0["+str(position+2)+"] = "
-                string += str(1.0- H0ratio**number_of_carbons - (H0ratio**(number_of_carbons-1.0))*H1ratio*number_of_carbons)
+                string += "\ty0[" + str(position + 2) + "] = "
+                string += str(1.0 - H0ratio**number_of_carbons -
+                              (H0ratio**(number_of_carbons - 1.0)) * H1ratio *
+                              number_of_carbons)
                 string += "\n"
             #print emu,position,stem, pos
         # emu_list = {}\
-        string += "\tif len(y0temp) == "+str(size_of_y)+":\n"
+        string += "\tif len(y0temp) == " + str(size_of_y) + ":\n"
         string += "\t\ty0 = y0temp[:]\n"
-
         """
         for (emu, position) in emu_intermediates_to_p.items():
             (stem, pos) = emu.split("_")
@@ -2303,12 +2892,12 @@ class MetabolicModel:
         # Pefrom integration
         #
         #string += "\tt1, y = exp_sim.simulate(max(timepoints),0,timepoints)\n"
-        #　
+        #
         #　Initialize list to store time course data
         #  emu_list['Glu_12345'] =[[time point 1,,,,], [time point 2,,,,], [time point 3,,,,], [time point 3,,,,],]
         #
         for emu in target_fragments:
-            string += "\temu_list[\'"+emu+"\'] = []\n"
+            string += "\temu_list[\'" + emu + "\'] = []\n"
         #for i, time in enumerate(t1):
         #assimulo
         #string += "\tfor i, time in enumerate(t1):\n"
@@ -2327,19 +2916,20 @@ class MetabolicModel:
             # "msms" type
             #
             if target_fragments[target_fragment]['type'] == "msms":
-                precursor, neutralloss, product = target_emus.replace(' ','').split('+')
+                precursor, neutralloss, product = target_emus.replace(
+                    ' ', '').split('+')
                 # Get sizes
-                size_precursor = size_of_EMU(precursor);
-                size_product = size_of_EMU(product);
-                size_neutralloss = size_of_EMU(neutralloss);
-                product_carbon_number = list(product.split('_')[1]);
-                product_mask = [];
+                size_precursor = size_of_EMU(precursor)
+                size_product = size_of_EMU(product)
+                size_neutralloss = size_of_EMU(neutralloss)
+                product_carbon_number = list(product.split('_')[1])
+                product_mask = []
                 for i in (range(size_precursor)):
                     product_mask.append("0")
                 for i in (product_carbon_number):
                     product_mask[size_precursor - int(i)] = "1"
-                numberofidv = 2 ** size_precursor
-                mdv_matrix = [];
+                numberofidv = 2**size_precursor
+                mdv_matrix = []
                 for pre in (range(0, size_precursor + 1)):
                     temp = []
                     for pro in (range(0, size_product + 1)):
@@ -2347,86 +2937,117 @@ class MetabolicModel:
                     mdv_matrix.append(temp)
                 mrm_count = 0
                 for i in (sorted(range(numberofidv))):
-                    idv="{0:0>{1}{2}}".format(i, size_precursor, 'b')
-                    idv_masked_by_product = format((int(idv,2) & int("".join(product_mask),2)), 'b')
-                    precursor_isotope_number = sum([1 for x in idv if x == "1"])
-                    product_isotope_number = sum([1 for x in idv_masked_by_product if x == "1"])
-                    if (mdv_matrix[precursor_isotope_number][product_isotope_number] == ''):
-                        mdv_matrix[precursor_isotope_number][product_isotope_number] = mrm_count
+                    idv = "{0:0>{1}{2}}".format(i, size_precursor, 'b')
+                    idv_masked_by_product = format(
+                        (int(idv, 2) & int("".join(product_mask), 2)), 'b')
+                    precursor_isotope_number = sum(
+                        [1 for x in idv if x == "1"])
+                    product_isotope_number = sum(
+                        [1 for x in idv_masked_by_product if x == "1"])
+                    if (mdv_matrix[precursor_isotope_number]
+                        [product_isotope_number] == ''):
+                        mdv_matrix[precursor_isotope_number][
+                            product_isotope_number] = mrm_count
                         mrm_count = mrm_count + 1
                 #print mdv_matrix
-                string += "\t\tA_" + precursor + product + "= numpy.zeros(("+str((mrm_count)*(mrm_count))+"))\n"
-                string += "\t\tB_" + precursor + product + "= numpy.zeros(("+str(mrm_count)+",))\n"
+                string += "\t\tA_" + precursor + product + "= numpy.zeros((" + str(
+                    (mrm_count) * (mrm_count)) + "))\n"
+                string += "\t\tB_" + precursor + product + "= numpy.zeros((" + str(
+                    mrm_count) + ",))\n"
                 equation_count = 0
 
                 #precursor ion
-                for i in range(size_precursor+1):
+                for i in range(size_precursor + 1):
                     if (equation_count >= mrm_count):
                         break
-                    for j in range(size_product+1):
+                    for j in range(size_product + 1):
                         if (mdv_matrix[i][j] != ''):
-                            string += "\t\tA_" + precursor + product+"[" + str(equation_count * (mrm_count) + mdv_matrix[i][j]) + "] = 1\n"
+                            string += "\t\tA_" + precursor + product + "[" + str(
+                                equation_count *
+                                (mrm_count) + mdv_matrix[i][j]) + "] = 1\n"
                     #string += "\t\tB_" + precursor + product+"[" + str(equation_count )+ "] = X_"+str(size_precursor)+"[" + str(emu_intermediate[int(size_precursor)][precursor] * (size_precursor + 1) + i)+"]\n"
-                    string += "\t\tB_" + precursor + product+"[" + str(equation_count )+ "] = y[i]["+ str(emu_intermediates_to_p[precursor] + i) + "]\n"
+                    string += "\t\tB_" + precursor + product + "[" + str(
+                        equation_count) + "] = y[i][" + str(
+                            emu_intermediates_to_p[precursor] + i) + "]\n"
 
                     equation_count = equation_count + 1
 
                 #product ion
-                for j in range(size_product+1):
+                for j in range(size_product + 1):
                     if (equation_count >= mrm_count):
                         break
-                    for i in range(size_precursor+1):
+                    for i in range(size_precursor + 1):
                         #print i, j, mdv_matrix[i][j]
                         if (mdv_matrix[i][j] != ''):
-                            string += "\t\tA_" + precursor + product+"[" + str(equation_count * (mrm_count) + mdv_matrix[i][j]) + "] = 1\n"
+                            string += "\t\tA_" + precursor + product + "[" + str(
+                                equation_count *
+                                (mrm_count) + mdv_matrix[i][j]) + "] = 1\n"
                     #string += "\t\tB_" + precursor + product+"[" + str(equation_count )+ "] = X_"+str(size_product)+"[" + str(emu_intermediate[int(size_product)][product] * (size_product + 1) + j)+"]\n"
-                    string += "\t\tB_" + precursor + product+"[" + str(equation_count )+ "] = y[i]["+ str(emu_intermediates_to_p[product] + j) + "]\n"
+                    string += "\t\tB_" + precursor + product + "[" + str(
+                        equation_count) + "] = y[i][" + str(
+                            emu_intermediates_to_p[product] + j) + "]\n"
 
                     equation_count = equation_count + 1
 
                 #neutral loss
-                for j in range(size_neutralloss+1):
+                for j in range(size_neutralloss + 1):
                     if (equation_count >= mrm_count):
                         break
-                    for i in range(size_product+1):
+                    for i in range(size_product + 1):
                         #print i, j, mdv_matrix[i][j]
                         if (mdv_matrix[i][i + j] != ''):
-                            string += "\t\tA_" + precursor + product+"[" + str(equation_count * (mrm_count) + mdv_matrix[i][i + j]) + "] = 1\n"
+                            string += "\t\tA_" + precursor + product + "[" + str(
+                                equation_count *
+                                (mrm_count) + mdv_matrix[i][i + j]) + "] = 1\n"
                     #string += "\t\tB_" + precursor + product+"[" + str(equation_count )+ "] = X_"+str(size_neutralloss)+"[" + str(emu_intermediate[int(size_neutralloss)][neutralloss] * (size_neutralloss + 1) + j)+"]\n"
-                    string += "\t\tB_" + precursor + product+"[" + str(equation_count )+ "] = y[i]["+ str(emu_intermediates_to_p[neutralloss] + j) + "]\n"
+                    string += "\t\tB_" + precursor + product + "[" + str(
+                        equation_count) + "] = y[i][" + str(
+                            emu_intermediates_to_p[neutralloss] + j) + "]\n"
 
                     equation_count = equation_count + 1
 
-                string +="\t\tA_" + precursor + product + ".resize(("+str(mrm_count)+","+ str(mrm_count)+"))\n"
+                string += "\t\tA_" + precursor + product + ".resize((" + str(
+                    mrm_count) + "," + str(mrm_count) + "))\n"
                 string += "\t\tMS_" + precursor + product + " = numpy.linalg.solve(A_" + precursor + product + ", B_" + precursor + product + ")\n"
-                string += "\t\temu_list['" + target_fragment +"'].append([" + ','.join("MS_" + precursor + product + "["+str(x)+"]" for x in range(mrm_count)) + "])\n"
+                string += "\t\temu_list['" + target_fragment + "'].append([" + ','.join(
+                    "MS_" + precursor + product + "[" + str(x) + "]"
+                    for x in range(mrm_count)) + "])\n"
             #
             # "gcms"
             #
             else:
-                emus = target_emus.replace(' ','').split('+')
+                emus = target_emus.replace(' ', '').split('+')
                 # only one EMU
                 if (len(emus) == 1):
                     emu = emus[0]
                     compound = compound_of_EMU(emu)
-                    size = size_of_EMU(emu);
+                    size = size_of_EMU(emu)
                     #row = ["X_"+str(size)+"["+ str(emu_intermediate[int(size)][emu] * (size + 1) + x) + "]"for x in range(size + 1)]
-                    row = ["y[i]["+ str(emu_intermediates_to_p[emu] + x) + "]"for x in range(size + 1)]
+                    row = [
+                        "y[i][" + str(emu_intermediates_to_p[emu] + x) + "]"
+                        for x in range(size + 1)
+                    ]
 
-                    string += "\t\temu_list['" + target_fragment +"'].append([" + ','.join(row) + "])\n"
-                    if self.configuration['add_naturalisotope_in_calmdv'] == "yes":
-                        if not self.target_fragments[target_fragment]["formula"] == "":
+                    string += "\t\temu_list['" + target_fragment + "'].append([" + ','.join(
+                        row) + "])\n"
+                    if self.configuration[
+                            'add_naturalisotope_in_calmdv'] == "yes":
+                        if not self.target_fragments[target_fragment][
+                                "formula"] == "":
                             string += "\t\tmdvtemp = [" + ','.join(row) + "]\n"
                             string += "\t\tmdvcorrected = mdvtemp[:]\n"
                             for i in range(len(row)):
                                 textdatatemp = []
                                 for j in range(len(row)):
-                                    textdatatemp.append(str(self.target_fragments[target_fragment]['natural_isotope_addition'][i,j]) + "* mdvtemp["+str(j)+"]" )
-                                string += "\t\tmdvcorrected[" + str(i) +"] =" + '+'.join(textdatatemp) + "\n"
+                                    textdatatemp.append(
+                                        str(self.
+                                            target_fragments[target_fragment]
+                                            ['natural_isotope_addition'][i, j])
+                                        + "* mdvtemp[" + str(j) + "]")
+                                string += "\t\tmdvcorrected[" + str(
+                                    i) + "] =" + '+'.join(textdatatemp) + "\n"
 
-                            string += "\t\temu_list['" + target_fragment +"'][-1] = mdvcorrected[:]\n"
-
-
+                            string += "\t\temu_list['" + target_fragment + "'][-1] = mdvcorrected[:]\n"
 
                 # multiple EMU
                 else:
@@ -2441,26 +3062,44 @@ class MetabolicModel:
                         for emuset in emu_list:
                             if (sum(emuset) == i):
                                 #print emuset
-                                temp_one_emu = "*".join(["X_"+str(sizeofemus[j])+"["+ str(emu_intermediate[int(sizeofemus[j])][emus[j]] * (sizeofemus[j] + 1) + emuset[j]) + "]" for j in range(len(emuset))])
+                                temp_one_emu = "*".join([
+                                    "X_" + str(sizeofemus[j]) + "[" +
+                                    str(emu_intermediate[int(sizeofemus[j])][
+                                        emus[j]] *
+                                        (sizeofemus[j] + 1) + emuset[j]) + "]"
+                                    for j in range(len(emuset))
+                                ])
 
-                                temp_one_emu = "*".join(["y[i]["+ str(emu_intermediates_to_p[emus[j]] + emuset[j]) + "]" for j in range(len(emuset))])
+                                temp_one_emu = "*".join([
+                                    "y[i][" +
+                                    str(emu_intermediates_to_p[emus[j]] +
+                                        emuset[j]) + "]"
+                                    for j in range(len(emuset))
+                                ])
                                 #string += "\t\tB_" + precursor + product+"[" + str(equation_count )+ "] = y[i]["+ str(emu_intermediates_to_p[precursor] + i) + "]\n"
 
                                 list_of_emuset.append(temp_one_emu)
                         row.append("+".join(list_of_emuset))
-                    string += "\t\temu_list['" + target_fragment +"'].append([" + ','.join(row) + "])\n"
-                    if self.configuration['add_naturalisotope_in_calmdv'] == "yes":
-                        if not self.target_fragments[target_fragment]["formula"] == "":
+                    string += "\t\temu_list['" + target_fragment + "'].append([" + ','.join(
+                        row) + "])\n"
+                    if self.configuration[
+                            'add_naturalisotope_in_calmdv'] == "yes":
+                        if not self.target_fragments[target_fragment][
+                                "formula"] == "":
                             string += "\t\tmdvtemp = [" + ','.join(row) + "]\n"
                             string += "\t\tmdvcorrected = mdvtemp[:]\n"
                             for i in range(len(row)):
                                 textdatatemp = []
                                 for j in range(len(row)):
-                                    textdatatemp.append(str(self.target_fragments[target_fragment]['natural_isotope_addition'][i,j]) + "* mdvtemp["+str(j)+"]" )
-                                string += "\t\tmdvcorrected[" + str(i) +"] =" + '+'.join(textdatatemp) + "\n"
+                                    textdatatemp.append(
+                                        str(self.
+                                            target_fragments[target_fragment]
+                                            ['natural_isotope_addition'][i, j])
+                                        + "* mdvtemp[" + str(j) + "]")
+                                string += "\t\tmdvcorrected[" + str(
+                                    i) + "] =" + '+'.join(textdatatemp) + "\n"
 
-                            string += "\t\temu_list['" + target_fragment +"'][-1] = mdvcorrected[:]\n"
-
+                            string += "\t\temu_list['" + target_fragment + "'][-1] = mdvcorrected[:]\n"
 
         string += "\tmdv = []\n"
         #string += "\tfor i, time in enumerate(t1):\n"
@@ -2472,9 +3111,7 @@ class MetabolicModel:
         string += "\t\t\t\telse:\n"
         string += "\t\t\t\t\tmdv.extend(emu_list[emu][i])\n"
 
-
-
-        string +=  "\treturn(numpy.array(mdv), emu_list)\n"
+        string += "\treturn(numpy.array(mdv), emu_list)\n"
 
         return (string, cython_string)
 
@@ -2537,9 +3174,9 @@ class MetabolicModel:
             #if word in self.configuration:
             self.configuration[word] = kwargs[word]
             if self.configuration['callbacklevel'] >= 4:
-                print(word,'is set at',kwargs[word])
+                print(word, 'is set at', kwargs[word])
 
-    def set_constrain(self, group, id, type, value = 0.1, stdev = 1.0):
+    def set_constrain(self, group, id, type, value=0.1, stdev=1.0):
         """
         Setter of a metabolic constrains.
         Please perform update() after model modification.
@@ -2578,7 +3215,7 @@ class MetabolicModel:
             dic_temp = self.reversible
         else:
             if self.configuration['callbacklevel'] >= 1:
-                print('ERROR:', group,' is wrong group')
+                print('ERROR:', group, ' is wrong group')
                 return False
 
         if type not in ["fitting", "fixed", "free", "pseudo"]:
@@ -2592,10 +3229,11 @@ class MetabolicModel:
             if float(stdev) >= 0:
                 dic_temp[id]['stdev'] = float(stdev)
             if self.configuration['callbacklevel'] >= 5:
-                print(id,' is set as ',type, group, ' with value at ',value, ' and stdev at ', stdev, '.')
+                print(id, ' is set as ', type, group, ' with value at ', value,
+                      ' and stdev at ', stdev, '.')
             return True
         if self.configuration['callbacklevel'] >= 1:
-            print('ERROR:', id,' not existed in the model')
+            print('ERROR:', id, ' not existed in the model')
         return False
 
     def get_constrain(self, group, id):
@@ -2632,7 +3270,7 @@ class MetabolicModel:
             dic_temp = self.reversible
         else:
             if self.configuration['callbacklevel'] >= 1:
-                print('ERROR:', group,' is wrong group')
+                print('ERROR:', group, ' is wrong group')
                 return False, False, False
 
         if id in dic_temp:
@@ -2641,7 +3279,7 @@ class MetabolicModel:
             stdev = float(dic_temp[id]['stdev'])
             return types, value, stdev
         if self.configuration['callbacklevel'] >= 1:
-            print('ERROR:', id,' not existed in the model')
+            print('ERROR:', id, ' not existed in the model')
         return False, False, False
 
     def set_boundary(self, group, id, lb, ub):
@@ -2672,20 +3310,19 @@ class MetabolicModel:
             dic_temp = self.reversible
         else:
             if self.configuration['callbacklevel'] >= 1:
-                print('ERROR:', group,' is wrong group')
+                print('ERROR:', group, ' is wrong group')
                 return False
-
 
         if id in dic_temp:
             dic_temp[id]['lb'] = float(lb)
             dic_temp[id]['ub'] = float(ub)
             if self.configuration['callbacklevel'] >= 5:
-                print("lower and upper boundaries of", id,' are set to be ', lb, "and", ub)
+                print("lower and upper boundaries of", id, ' are set to be ',
+                      lb, "and", ub)
             return True
         if self.configuration['callbacklevel'] >= 1:
-            print('ERROR:', id,' not existed in the model')
+            print('ERROR:', id, ' not existed in the model')
         return False
-
 
     def set_constraints_from_state_dict(self, dict):
         """
@@ -2718,16 +3355,17 @@ class MetabolicModel:
                 stdev = dict[group][id]['stdev']
                 lb = dict[group][id]['lb']
                 ub = dict[group][id]['ub']
-                self.set_constrain(group, id, type, value = value, stdev = stdev)
+                self.set_constrain(group, id, type, value=value, stdev=stdev)
                 self.set_boundary(group, id, lb, ub)
-                counter = counter   + 1
+                counter = counter + 1
                 if self.configuration['callbacklevel'] >= 5:
-                    print(id,' is set as ',type, group, ' with value at ',value, ' and stdev at ', stdev, " and boundaries", lb, ub,'.')
+                    print(id, ' is set as ', type, group, ' with value at ',
+                          value, ' and stdev at ', stdev, " and boundaries",
+                          lb, ub, '.')
         self.update()
         if self.configuration['callbacklevel'] >= 3:
             print("Batch setting of", counter, "constrains.")
         return True
-
 
     def generate_state_dict(self, tmp_r):
         """
@@ -2757,36 +3395,40 @@ class MetabolicModel:
                 'value': tmp_r[self.reactions[id]['position_in_tmp_r']],
                 'stdev': self.reactions[id]['stdev'],
                 'type': self.reactions[id]['type'],
-                'reversible':self.reactions[id]['reversible'],
-                'order':self.reactions[id]['order'],
-                'lb':self.reactions[id]['lb'],
-                'ub':self.reactions[id]['ub'],
+                'reversible': self.reactions[id]['reversible'],
+                'order': self.reactions[id]['order'],
+                'lb': self.reactions[id]['lb'],
+                'ub': self.reactions[id]['ub'],
             }
         conc_dict = {}
         for i, id in enumerate(self.metabolites):
             conc_dict[id] = {
                 'value': self.metabolites[id]['value'],
                 'stdev': self.metabolites[id]['stdev'],
-                'type':self.metabolites[id]['type'],
-                'order':self.metabolites[id]['order'],
-                'lb':self.metabolites[id]['lb'],
-                'ub':self.metabolites[id]['ub'],
+                'type': self.metabolites[id]['type'],
+                'order': self.metabolites[id]['order'],
+                'lb': self.metabolites[id]['lb'],
+                'ub': self.metabolites[id]['ub'],
             }
             if id in self.metabolite_ids:
-                conc_dict[id]['value'] = tmp_r[self.metabolites[id]['position_in_tmp_r']]
+                conc_dict[id]['value'] = tmp_r[self.metabolites[id]
+                                               ['position_in_tmp_r']]
         reversible_dict = {}
         for i, id in enumerate(self.reversible_ids):
             reversible_dict[id] = {
-                'value':tmp_r[self.reversible[id]['position_in_tmp_r']],
-                'stdev':self.reversible[id]['stdev'],
-                'type':self.reversible[id]['type'],
-                'order':self.reversible[id]['order'],
-                'lb':self.reversible[id]['lb'],
-                'ub':self.reversible[id]['ub'],
+                'value': tmp_r[self.reversible[id]['position_in_tmp_r']],
+                'stdev': self.reversible[id]['stdev'],
+                'type': self.reversible[id]['type'],
+                'order': self.reversible[id]['order'],
+                'lb': self.reversible[id]['lb'],
+                'ub': self.reversible[id]['ub'],
             }
 
-        return {"reaction":flux_dict, "metabolite":conc_dict, "reversible": reversible_dict}
-
+        return {
+            "reaction": flux_dict,
+            "metabolite": conc_dict,
+            "reversible": reversible_dict
+        }
 
     def generate_carbon_source_templete(self):
         """
@@ -2814,15 +3456,15 @@ class MetabolicModel:
         #for each line in mass data
         for compound in self.carbon_source:
             cs[compound] = {
-            'IDV': self.carbon_source[compound]['IDV'][:],
-            'size': self.carbon_source[compound]['size']
+                'IDV': self.carbon_source[compound]['IDV'][:],
+                'size': self.carbon_source[compound]['size']
             }
         # Initial data is full 12C without natural 13C
         for compound in cs:
             cs[compound]['IDV'][0] = 1.0
         return carbonsource.CarbonSource(cs)
 
-    def generate_mdv(self, flux, carbon_sources, timepoint = [], startidv = []):
+    def generate_mdv(self, flux, carbon_sources, timepoint=[], startidv=[]):
         """
         Generator of a MdvData instance including MDV data generated from given flux and carbon sources.
 
@@ -2851,37 +3493,52 @@ class MetabolicModel:
 
         """
 
-        tmp_r = [flux[group][id]['value'] for (group, id) in self.vector["ids"]]
+        tmp_r = [
+            flux[group][id]['value'] for (group, id) in self.vector["ids"]
+        ]
         mdv_carbon_sources = carbon_sources.generate_dict()
         #Call calmdv via calc_MDV_from_flux function in mfapy.optimize
         if len(timepoint) == 0:
-            mdv_exp, mdv_hash = optimize.calc_MDV_from_flux(tmp_r, self.target_fragments.keys(), mdv_carbon_sources, self.func)
+            mdv_exp, mdv_hash = optimize.calc_MDV_from_flux(
+                tmp_r, self.target_fragments.keys(), mdv_carbon_sources,
+                self.func)
             mdv_data = mdv.MdvData(self.target_fragments)
             for fragment, item in mdv_hash.items():
                 for number in range(len(item)):
                     if mdv_data.has_data(fragment, number):
-                        mdv_data.set_data(fragment, number, mdv_hash[fragment][number], 1.0, "use")
+                        mdv_data.set_data(fragment, number,
+                                          mdv_hash[fragment][number], 1.0,
+                                          "use")
             return mdv_data
         else:
             startidv_temp = []
             if len(startidv) == len(self.emu_order_in_y):
                 startidv_temp = list(startidv)
-            mdv_exp, mdv_hash = optimize.calc_MDV_from_flux(tmp_r, self.target_fragments.keys(), mdv_carbon_sources, self.func, timepoint = timepoint, y0temp = startidv_temp)
+            mdv_exp, mdv_hash = optimize.calc_MDV_from_flux(
+                tmp_r,
+                self.target_fragments.keys(),
+                mdv_carbon_sources,
+                self.func,
+                timepoint=timepoint,
+                y0temp=startidv_temp)
             #
             #mdv_timecourseインスタンスの生成
             #
             mdv_timecourse = mdv.MdvTimeCourseData()
             for point in timepoint:
-                mdv_timecourse.add_time_point(point,mdv.MdvData(self.target_fragments))
+                mdv_timecourse.add_time_point(
+                    point, mdv.MdvData(self.target_fragments))
             for fragment, item in mdv_hash.items():
-                for i,ratio in enumerate(item):
+                for i, ratio in enumerate(item):
                     for number in range(len(ratio)):
-                        if mdv_timecourse.has_data(timepoint[i], fragment, number):
-                            mdv_timecourse.set_data(timepoint[i], fragment, number, mdv_hash[fragment][i][number], 1.0, "use")
+                        if mdv_timecourse.has_data(timepoint[i], fragment,
+                                                   number):
+                            mdv_timecourse.set_data(
+                                timepoint[i], fragment, number,
+                                mdv_hash[fragment][i][number], 1.0, "use")
             return mdv_timecourse
 
-
-    def set_experiment(self, name, mdv, carbon_sources, startidv = []):
+    def set_experiment(self, name, mdv, carbon_sources, startidv=[]):
         """
         Setter of an 'experiment' to metabolic model. Here an 'experiment' indicated
         a set of a carbon source labeling pattern and a measured MDV data.
@@ -2907,18 +3564,19 @@ class MetabolicModel:
 
         """
 
-        ids, mdv_exp_original, mdv_std_original, mdv_use, target_emu_list, rawdata = mdv.generate_observed_mdv()
+        ids, mdv_exp_original, mdv_std_original, mdv_use, target_emu_list, rawdata = mdv.generate_observed_mdv(
+        )
         number_of_measurement = mdv.get_number_of_measurement()
         mdv_carbon_sources = carbon_sources.generate_dict()
-        self.experiments[name]={
-            'mode':"ST",
-            'mdv_exp_original':list(mdv_exp_original),
-            'mdv_std_original':list(mdv_std_original),
-            'mdv_use':list(mdv_use),
-            'mdv_ids':list(ids),
-            'target_emu_list':list(target_emu_list),
-            'mdv_carbon_sources':mdv_carbon_sources,
-            'number_of_measurement':number_of_measurement
+        self.experiments[name] = {
+            'mode': "ST",
+            'mdv_exp_original': list(mdv_exp_original),
+            'mdv_std_original': list(mdv_std_original),
+            'mdv_use': list(mdv_use),
+            'mdv_ids': list(ids),
+            'target_emu_list': list(target_emu_list),
+            'mdv_carbon_sources': mdv_carbon_sources,
+            'number_of_measurement': number_of_measurement
         }
         if mdv.mode == "timecourse":
             self.experiments[name]["mode"] = "INST"
@@ -2938,14 +3596,24 @@ class MetabolicModel:
                         H1ratio = 0.0107
 
                         (stem, pos) = emu[0].split("_")
-                        pos = pos.replace(':','') #200517 ver 056 modified 炭素移動の表記が変わったので
+                        pos = pos.replace(
+                            ':', '')  #200517 ver 056 modified 炭素移動の表記が変わったので
                         number_of_carbons = len(pos)
-                        self.experiments[name]["y0"][position] = H0ratio**number_of_carbons
-                        self.experiments[name]["y0"][position + 1] = (H0ratio**(number_of_carbons-1.0))*H1ratio*number_of_carbons
+                        self.experiments[name]["y0"][
+                            position] = H0ratio**number_of_carbons
+                        self.experiments[name]["y0"][
+                            position +
+                            1] = (H0ratio**(number_of_carbons -
+                                            1.0)) * H1ratio * number_of_carbons
                         if number_of_carbons > 2:
-                            self.experiments[name]["y0"][position + 2] = 1.0- H0ratio**number_of_carbons - (H0ratio**(number_of_carbons-1.0))*H1ratio*number_of_carbons
+                            self.experiments[name]["y0"][
+                                position +
+                                2] = 1.0 - H0ratio**number_of_carbons - (
+                                    H0ratio**(number_of_carbons - 1.0
+                                              )) * H1ratio * number_of_carbons
         if self.configuration['callbacklevel'] >= 3:
-            print("Set experiment: ", name,' was added to the metabolic model.')
+            print("Set experiment: ", name,
+                  ' was added to the metabolic model.')
         return True
 
     def calc_idv(self, flux, carbon_sources):
@@ -2975,18 +3643,22 @@ class MetabolicModel:
         """
 
         calmdv = self.func["calmdv"]
-        matrixinv=self.matrixinv
-        Rm_initial= self.vector["Rm_initial"]
+        matrixinv = self.matrixinv
+        Rm_initial = self.vector["Rm_initial"]
         stoichiometric_num = self.numbers['independent_start']
-        reaction_num= self.numbers['total_number']
-        Rm_ind = [flux[group][id]["value"] for (group, id) in self.vector['independent_flux']]
+        reaction_num = self.numbers['total_number']
+        Rm_ind = [
+            flux[group][id]["value"]
+            for (group, id) in self.vector['independent_flux']
+        ]
         Rm = numpy.array(list(Rm_initial))
-        Rm[stoichiometric_num: reaction_num] = list(Rm_ind)
+        Rm[stoichiometric_num:reaction_num] = list(Rm_ind)
         tmp_r = numpy.dot(matrixinv, Rm)
         target_emu_list = list(self.target_fragments)
         mdv_carbon_sources = carbon_sources.mdv_carbon_sources
 
-        mdv_original_temp, mdv_hash = calmdv(list(tmp_r), target_emu_list, mdv_carbon_sources)
+        mdv_original_temp, mdv_hash = calmdv(list(tmp_r), target_emu_list,
+                                             mdv_carbon_sources)
 
         X = mdv_hash['X_list']
         for i, x in enumerate(X):
@@ -3001,7 +3673,6 @@ class MetabolicModel:
         for position, emu in enumerate(self.emu_order_in_y):
             y0[position] = X_dict[emu]
         return y0
-
 
     def clear_experiment(self):
         """
@@ -3030,11 +3701,12 @@ class MetabolicModel:
         names = list(self.experiments.keys())
         self.experiments = {}
         if self.configuration['callbacklevel'] >= 3:
-            print("Clear experiment: ", names,' are removed from the metabolic model.')
+            print("Clear experiment: ", names,
+                  ' are removed from the metabolic model.')
 
         return True
 
-    def generate_state(self, template = []):
+    def generate_state(self, template=[]):
         """
         Generator of a random metabolic flux distribution.
 
@@ -3044,12 +3716,12 @@ class MetabolicModel:
 
         Returns
         ----------
-        flux : Dictionary of metabolic flux data.
-        independent_flux : List of independent flux
+        flux : Dictionaly of single metabolic state data.
+        state : State of generation results
 
         Examples
         --------
-        >>> flux, independent_flux = model.generate_intial_flux_distribution()
+        >>> flux, state = model.generate_state()
 
         See Also
         --------
@@ -3063,19 +3735,28 @@ class MetabolicModel:
         configuration = copy.deepcopy(self.configuration)
 
         matrixinv = self.matrixinv
-        initial_search_iteration_max = configuration["initial_search_iteration_max"]
+        initial_search_iteration_max = configuration[
+            "initial_search_iteration_max"]
 
         ub = [self.reactions[x]['ub'] for x in self.reaction_ids]
         lb = [self.reactions[x]['lb'] for x in self.reaction_ids]
         if len(template) > 0:
-            template = [template[type][id]["value"] for (type, id) in self.vector["ids"]]
+            template = [
+                template[type][id]["value"]
+                for (type, id) in self.vector["ids"]
+            ]
 
-        tmp_r, Rm_temp, Rm_ind, state = optimize.initializing_Rm_fitting(numbers, vectors, matrixinv, template ,initial_search_iteration_max)
+        tmp_r, Rm_temp, Rm_ind, state = optimize.initializing_Rm_fitting(
+            numbers, vectors, matrixinv, template,
+            initial_search_iteration_max)
 
         return self.generate_state_dict(tmp_r), state
 
-
-    def generate_initial_states(self, iterations = 100, initial_states = 1, method = 'normal', template = []):
+    def generate_initial_states(self,
+                                iterations=100,
+                                initial_states=1,
+                                method='normal',
+                                template=[]):
         """
         Initial metabolic states are randomly generated for "iterations" times from which
         better states with lower RSS (number_of_initial_states) were selected.
@@ -3137,7 +3818,8 @@ class MetabolicModel:
         configuration = copy.deepcopy(self.configuration)
 
         matrixinv = self.matrixinv
-        initial_search_iteration_max = configuration["initial_search_iteration_max"]
+        initial_search_iteration_max = configuration[
+            "initial_search_iteration_max"]
 
         ub = [self.reactions[x]['ub'] for x in self.reaction_ids]
         lb = [self.reactions[x]['lb'] for x in self.reaction_ids]
@@ -3145,10 +3827,14 @@ class MetabolicModel:
         rsses = []
 
         if len(template) > 0:
-            template = [template[type][id]["value"] for (type, id) in self.vector["ids"]]
+            template = [
+                template[type][id]["value"]
+                for (type, id) in self.vector["ids"]
+            ]
 
         if self.configuration['callbacklevel'] >= 3:
-            print("Generation of initial state(s) was started by",method,"method.")
+            print("Generation of initial state(s) was started by", method,
+                  "method.")
 
         if method == "parallelpp":
             #for i in range(iterations):
@@ -3167,13 +3853,13 @@ class MetabolicModel:
             if 'ppservers' in self.configuration:
                 ppservers = self.configuration['ppservers']
             else:
-                ppservers = ("",)
+                ppservers = ("", )
             #
             # tuple of all parallel python servers to connect with
             #
             try:
                 import pp
-                job_server = pp.Server(ncpus = ncpus, ppservers=ppservers)
+                job_server = pp.Server(ncpus=ncpus, ppservers=ppservers)
             except:
                 print("This function requires Parallel Python!")
                 return False
@@ -3183,13 +3869,16 @@ class MetabolicModel:
 
             jobs = []
 
-
             for i in range(iterations):
-                parameters = (numbers, vectors, matrixinv, template ,initial_search_iteration_max)
-                jobs.append([i, job_server.submit(optimize.initializing_Rm_fitting, parameters,
-                 (optimize.calc_protrude_scipy,),
-                 ("numpy","scipy.optimize","mkl"))])
-
+                parameters = (numbers, vectors, matrixinv, template,
+                              initial_search_iteration_max)
+                jobs.append([
+                    i,
+                    job_server.submit(optimize.initializing_Rm_fitting,
+                                      parameters,
+                                      (optimize.calc_protrude_scipy, ),
+                                      ("numpy", "scipy.optimize", "mkl"))
+                ])
 
             for j, job in jobs:
                 results = job()
@@ -3223,10 +3912,16 @@ class MetabolicModel:
                 return False
             jobs = []
             for i in range(iterations):
-                parameters = (numbers, vectors, matrixinv, template ,initial_search_iteration_max)
+                parameters = (numbers, vectors, matrixinv, template,
+                              initial_search_iteration_max)
                 jobs.append(parameters)
-            result = Parallel(n_jobs=ncpus)([delayed(optimize.initializing_Rm_fitting)(numbers, vectors, matrixinv, template ,initial_search_iteration_max) for (numbers, vectors, matrixinv, template ,initial_search_iteration_max) in jobs])
-
+            result = Parallel(n_jobs=ncpus)([
+                delayed(optimize.initializing_Rm_fitting)(
+                    numbers, vectors, matrixinv, template,
+                    initial_search_iteration_max)
+                for (numbers, vectors, matrixinv, template,
+                     initial_search_iteration_max) in jobs
+            ])
 
             for results in result:
                 if results == None:
@@ -3240,14 +3935,15 @@ class MetabolicModel:
         else:
             for i in range(iterations):
                 #print(template)
-                tmp_r, Rm_temp, Rm_ind, state = optimize.initializing_Rm_fitting(numbers, vectors, matrixinv, template ,initial_search_iteration_max)
+                tmp_r, Rm_temp, Rm_ind, state = optimize.initializing_Rm_fitting(
+                    numbers, vectors, matrixinv, template,
+                    initial_search_iteration_max)
                 if state == "Determined":
                     flux_temp_r = self.generate_state_dict(tmp_r)
                     fluxes.append(flux_temp_r)
                     rsses.append(self.calc_rss(flux_temp_r))
                     #print(self.calc_rss(flux_temp_r))
         order = sorted(list(range(len(fluxes))), key=lambda x: rsses[x])
-
 
         fluxes = [fluxes[x] for x in order]
         rsses = [rsses[x] for x in order]
@@ -3256,8 +3952,9 @@ class MetabolicModel:
         if self.configuration['callbacklevel'] == 4:
             print(state, "initial state(s) was generated.")
         if self.configuration['callbacklevel'] >= 5:
-            print(state, "initial state(s) was generated. RSS of best one is: ", rsses[0])
-
+            print(state,
+                  "initial state(s) was generated. RSS of best one is: ",
+                  rsses[0])
 
         if len(fluxes) == 0:
             return state, fluxes
@@ -3268,8 +3965,7 @@ class MetabolicModel:
         else:
             return state, fluxes
 
-
-    def fitting_flux(self, method = 'SLSQP', flux = [], output = 'result'):
+    def fitting_flux(self, method='SLSQP', flux=[], output='result'):
         """
         Method for fitting a metabolic model to multiple experiments
 
@@ -3347,63 +4043,176 @@ class MetabolicModel:
         #
         if output == "for_parallel":
             if method == "SLSQP":
-                parameters = (configuration, self.experiments, numbers, vectors, self.matrixinv, self.calmdv_text, flux, "SLSQP")
+                parameters = (configuration, self.experiments, numbers,
+                              vectors, self.matrixinv, self.calmdv_text, flux,
+                              "SLSQP")
             elif method == "LN_PRAXIS":
-                parameters = (configuration, self.experiments, numbers, vectors, self.matrixinv, self.calmdv_text, flux, "LN_PRAXIS")
+                parameters = (configuration, self.experiments, numbers,
+                              vectors, self.matrixinv, self.calmdv_text, flux,
+                              "LN_PRAXIS")
             elif method == "GN_CRS2_LM":
-                parameters = (configuration, self.experiments, numbers, vectors, self.matrixinv, self.calmdv_text, flux, "GN_CRS2_LM")
+                parameters = (configuration, self.experiments, numbers,
+                              vectors, self.matrixinv, self.calmdv_text, flux,
+                              "GN_CRS2_LM")
             elif method == "deep":
-                parameters = (configuration, self.experiments, numbers, vectors, self.matrixinv, self.calmdv_text, flux)
+                parameters = (configuration, self.experiments, numbers,
+                              vectors, self.matrixinv, self.calmdv_text, flux)
             else:
-                parameters = (configuration, self.experiments, numbers, vectors, self.matrixinv, self.calmdv_text, flux, "SLSQP")
+                parameters = (configuration, self.experiments, numbers,
+                              vectors, self.matrixinv, self.calmdv_text, flux,
+                              "SLSQP")
             return parameters
-
-
 
         if isinstance(flux, dict):
             if self.configuration['callbacklevel'] >= 3:
-                print("Trying to start fitting task using",method,"method in single mode")
+                print("Trying to start fitting task using", method,
+                      "method in single mode")
             if method == "SLSQP":
-                state, kai, opt_flux, Rm_ind_sol = optimize.fit_r_mdv_scipy(configuration, self.experiments, numbers, vectors, self.matrixinv, self.func, flux, method = "SLSQP")
+                state, kai, opt_flux, Rm_ind_sol = optimize.fit_r_mdv_scipy(
+                    configuration,
+                    self.experiments,
+                    numbers,
+                    vectors,
+                    self.matrixinv,
+                    self.func,
+                    flux,
+                    method="SLSQP")
             elif method == "COBYLA":
-                state, kai, opt_flux, Rm_ind_sol = optimize.fit_r_mdv_scipy(configuration, self.experiments, numbers, vectors, self.matrixinv, self.func, flux, method = "COBYLA")
+                state, kai, opt_flux, Rm_ind_sol = optimize.fit_r_mdv_scipy(
+                    configuration,
+                    self.experiments,
+                    numbers,
+                    vectors,
+                    self.matrixinv,
+                    self.func,
+                    flux,
+                    method="COBYLA")
             elif method == "LN_COBYLA":
-                state, kai, opt_flux, Rm_ind_sol = optimize.fit_r_mdv_nlopt(configuration, self.experiments, numbers, vectors, self.matrixinv, self.func, flux, method = "LN_COBYLA")
+                state, kai, opt_flux, Rm_ind_sol = optimize.fit_r_mdv_nlopt(
+                    configuration,
+                    self.experiments,
+                    numbers,
+                    vectors,
+                    self.matrixinv,
+                    self.func,
+                    flux,
+                    method="LN_COBYLA")
             elif method == "LN_BOBYQA":
-                state, kai, opt_flux, Rm_ind_sol = optimize.fit_r_mdv_nlopt(configuration, self.experiments, numbers, vectors, self.matrixinv, self.func, flux, method = "LN_BOBYQA")
+                state, kai, opt_flux, Rm_ind_sol = optimize.fit_r_mdv_nlopt(
+                    configuration,
+                    self.experiments,
+                    numbers,
+                    vectors,
+                    self.matrixinv,
+                    self.func,
+                    flux,
+                    method="LN_BOBYQA")
             elif method == "LN_NEWUOA":
-                state, kai, opt_flux, Rm_ind_sol = optimize.fit_r_mdv_nlopt(configuration, self.experiments, numbers, vectors, self.matrixinv, self.func, flux, method = "LN_NEWUOA")
+                state, kai, opt_flux, Rm_ind_sol = optimize.fit_r_mdv_nlopt(
+                    configuration,
+                    self.experiments,
+                    numbers,
+                    vectors,
+                    self.matrixinv,
+                    self.func,
+                    flux,
+                    method="LN_NEWUOA")
             elif method == "LN_PRAXIS":
-                state, kai, opt_flux, Rm_ind_sol = optimize.fit_r_mdv_nlopt(configuration, self.experiments, numbers, vectors, self.matrixinv, self.func, flux, method = "LN_PRAXIS")
+                state, kai, opt_flux, Rm_ind_sol = optimize.fit_r_mdv_nlopt(
+                    configuration,
+                    self.experiments,
+                    numbers,
+                    vectors,
+                    self.matrixinv,
+                    self.func,
+                    flux,
+                    method="LN_PRAXIS")
             elif method == "LN_SBPLX":
-                state, kai, opt_flux, Rm_ind_sol = optimize.fit_r_mdv_nlopt(configuration, self.experiments, numbers, vectors, self.matrixinv, self.func, flux, method = "LN_SBPLX")
+                state, kai, opt_flux, Rm_ind_sol = optimize.fit_r_mdv_nlopt(
+                    configuration,
+                    self.experiments,
+                    numbers,
+                    vectors,
+                    self.matrixinv,
+                    self.func,
+                    flux,
+                    method="LN_SBPLX")
             elif method == "LN_NELDERMEAD":
-                state, kai, opt_flux, Rm_ind_sol = optimize.fit_r_mdv_nlopt(configuration, self.experiments, numbers, vectors, self.matrixinv, self.func, flux, method = "LN_NELDERMEAD")
+                state, kai, opt_flux, Rm_ind_sol = optimize.fit_r_mdv_nlopt(
+                    configuration,
+                    self.experiments,
+                    numbers,
+                    vectors,
+                    self.matrixinv,
+                    self.func,
+                    flux,
+                    method="LN_NELDERMEAD")
             elif method == "GN_DIRECT_L":
-                state, kai, opt_flux, Rm_ind_sol = optimize.fit_r_mdv_nlopt(configuration, self.experiments, numbers, vectors, self.matrixinv, self.func, flux, method = "GN_DIRECT_L")
+                state, kai, opt_flux, Rm_ind_sol = optimize.fit_r_mdv_nlopt(
+                    configuration,
+                    self.experiments,
+                    numbers,
+                    vectors,
+                    self.matrixinv,
+                    self.func,
+                    flux,
+                    method="GN_DIRECT_L")
             elif method == "GN_CRS2_LM":
-                state, kai, opt_flux, Rm_ind_sol = optimize.fit_r_mdv_nlopt(configuration, self.experiments, numbers, vectors, self.matrixinv, self.func, flux, method = "GN_CRS2_LM")
+                state, kai, opt_flux, Rm_ind_sol = optimize.fit_r_mdv_nlopt(
+                    configuration,
+                    self.experiments,
+                    numbers,
+                    vectors,
+                    self.matrixinv,
+                    self.func,
+                    flux,
+                    method="GN_CRS2_LM")
             elif method == "GN_ESCH":
-                state, kai, opt_flux, Rm_ind_sol = optimize.fit_r_mdv_nlopt(configuration, self.experiments, numbers, vectors, self.matrixinv, self.func, flux, method = "GN_ESCH")
+                state, kai, opt_flux, Rm_ind_sol = optimize.fit_r_mdv_nlopt(
+                    configuration,
+                    self.experiments,
+                    numbers,
+                    vectors,
+                    self.matrixinv,
+                    self.func,
+                    flux,
+                    method="GN_ESCH")
             elif method == "GN_IRES":
-                state, kai, opt_flux, Rm_ind_sol = optimize.fit_r_mdv_nlopt(configuration, self.experiments, numbers, vectors, self.matrixinv, self.func, flux, method = "GN_IRES")
-
+                state, kai, opt_flux, Rm_ind_sol = optimize.fit_r_mdv_nlopt(
+                    configuration,
+                    self.experiments,
+                    numbers,
+                    vectors,
+                    self.matrixinv,
+                    self.func,
+                    flux,
+                    method="GN_IRES")
 
             elif method == "deep":
-                state, kai, opt_flux, Rm_ind_sol = optimize.fit_r_mdv_deep(configuration, self.experiments, numbers, vectors, self.matrixinv, self.func, flux)
+                state, kai, opt_flux, Rm_ind_sol = optimize.fit_r_mdv_deep(
+                    configuration, self.experiments, numbers, vectors,
+                    self.matrixinv, self.func, flux)
             else:
-                state, kai, opt_flux, Rm_ind_sol = optimize.fit_r_mdv_scipy(configuration, self.experiments, numbers, vectors, self.matrixinv, self.func, flux, method = "SLSQP")
-
+                state, kai, opt_flux, Rm_ind_sol = optimize.fit_r_mdv_scipy(
+                    configuration,
+                    self.experiments,
+                    numbers,
+                    vectors,
+                    self.matrixinv,
+                    self.func,
+                    flux,
+                    method="SLSQP")
 
             if self.configuration['callbacklevel'] == 3:
                 print("Fitting task in single mode was finished.")
             if self.configuration['callbacklevel'] == 4:
-                print("Fitting task in single mode was finished with finishing state",state,".")
+                print(
+                    "Fitting task in single mode was finished with finishing state",
+                    state, ".")
             if self.configuration['callbacklevel'] >= 5:
-                print("Fitting task in single mode was finished with finishing state",state," RSS is: ", kai)
-
-
-
+                print(
+                    "Fitting task in single mode was finished with finishing state",
+                    state, " RSS is: ", kai)
 
             return state, kai, self.generate_state_dict(opt_flux)
 
@@ -3418,7 +4227,7 @@ class MetabolicModel:
             if 'ppservers' in self.configuration:
                 ppservers = self.configuration['ppservers']
             else:
-                ppservers = ("",)
+                ppservers = ("", )
             #
             # tuple of all parallel python servers to connect with
             #
@@ -3431,54 +4240,102 @@ class MetabolicModel:
             jobs = []
 
             if self.configuration['callbacklevel'] >= 3:
-                print("Trying to start fitting task using", method, "method using parallel processing")
+                print("Trying to start fitting task using", method,
+                      "method using parallel processing")
 
             if method == "SLSQP":
                 for i, flux_temp in enumerate(flux):
-                    parameters = (configuration, self.experiments, numbers, vectors, self.matrixinv, self.calmdv_text, flux_temp, "SLSQP")
+                    parameters = (configuration, self.experiments, numbers,
+                                  vectors, self.matrixinv, self.calmdv_text,
+                                  flux_temp, "SLSQP")
                     jobs.append(parameters)
-                result = Parallel(n_jobs=ncpus)([delayed(optimize.fit_r_mdv_scipy)(configuration, experiments, numbers, vectors, matrixinv, calmdv_text, flux_temp, method) for (configuration, experiments, numbers, vectors, matrixinv, calmdv_text, flux_temp, method) in jobs])
+                result = Parallel(n_jobs=ncpus)([
+                    delayed(optimize.fit_r_mdv_scipy)(configuration,
+                                                      experiments, numbers,
+                                                      vectors, matrixinv,
+                                                      calmdv_text, flux_temp,
+                                                      method)
+                    for (configuration, experiments, numbers, vectors,
+                         matrixinv, calmdv_text, flux_temp, method) in jobs
+                ])
 
-                    #jobs.append([i, job_server.submit(optimize.fit_r_mdv_scipy, parameters,
-                    # (optimize.calc_MDV_residue_scipy,),
-                    # ("numpy","scipy","scipy.integrate"))])
+                #jobs.append([i, job_server.submit(optimize.fit_r_mdv_scipy, parameters,
+                # (optimize.calc_MDV_residue_scipy,),
+                # ("numpy","scipy","scipy.integrate"))])
             elif method == "LN_PRAXIS":
                 for i, flux_temp in enumerate(flux):
-                    parameters = (configuration, self.experiments, numbers, vectors, self.matrixinv, self.calmdv_text, flux_temp, "LN_PRAXIS")
+                    parameters = (configuration, self.experiments, numbers,
+                                  vectors, self.matrixinv, self.calmdv_text,
+                                  flux_temp, "LN_PRAXIS")
                     jobs.append(parameters)
-                result = Parallel(n_jobs=ncpus)([delayed(optimize.fit_r_mdv_nlopt)(configuration, experiments, numbers, vectors, matrixinv, calmdv_text, flux_temp, method) for (configuration, experiments, numbers, vectors, matrixinv, calmdv_text, flux_temp, method) in jobs])
+                result = Parallel(n_jobs=ncpus)([
+                    delayed(optimize.fit_r_mdv_nlopt)(configuration,
+                                                      experiments, numbers,
+                                                      vectors, matrixinv,
+                                                      calmdv_text, flux_temp,
+                                                      method)
+                    for (configuration, experiments, numbers, vectors,
+                         matrixinv, calmdv_text, flux_temp, method) in jobs
+                ])
 
-                    #jobs.append([i, job_server.submit(optimize.fit_r_mdv_nlopt, parameters,
-                    # (optimize.calc_MDV_residue_scipy, optimize.calc_MDV_residue_nlopt,optimize.fit_r_mdv_scipy,optimize.fit_r_mdv_nlopt),
-                    # ("numpy","nlopt","scipy","scipy.integrate"))])
+                #jobs.append([i, job_server.submit(optimize.fit_r_mdv_nlopt, parameters,
+                # (optimize.calc_MDV_residue_scipy, optimize.calc_MDV_residue_nlopt,optimize.fit_r_mdv_scipy,optimize.fit_r_mdv_nlopt),
+                # ("numpy","nlopt","scipy","scipy.integrate"))])
             elif method == "GN_CRS2_LM":
                 for i, flux_temp in enumerate(flux):
-                    parameters = (configuration, self.experiments, numbers, vectors, self.matrixinv, self.calmdv_text, flux_temp, "GN_CRS2_LM")
+                    parameters = (configuration, self.experiments, numbers,
+                                  vectors, self.matrixinv, self.calmdv_text,
+                                  flux_temp, "GN_CRS2_LM")
                     jobs.append(parameters)
-                result = Parallel(n_jobs=ncpus)([delayed(optimize.fit_r_mdv_nlopt)(configuration, experiments, numbers, vectors, matrixinv, calmdv_text, flux_temp, method) for (configuration, experiments, numbers, vectors, matrixinv, calmdv_text, flux_temp, method) in jobs])
+                result = Parallel(n_jobs=ncpus)([
+                    delayed(optimize.fit_r_mdv_nlopt)(configuration,
+                                                      experiments, numbers,
+                                                      vectors, matrixinv,
+                                                      calmdv_text, flux_temp,
+                                                      method)
+                    for (configuration, experiments, numbers, vectors,
+                         matrixinv, calmdv_text, flux_temp, method) in jobs
+                ])
 
-                    #jobs.append([i, job_server.submit(optimize.fit_r_mdv_nlopt, parameters,
-                    # (optimize.calc_MDV_residue_scipy, optimize.calc_MDV_residue_nlopt,optimize.fit_r_mdv_scipy,optimize.fit_r_mdv_nlopt),
-                    # ("numpy","nlopt","scipy","scipy.integrate"))])
+                #jobs.append([i, job_server.submit(optimize.fit_r_mdv_nlopt, parameters,
+                # (optimize.calc_MDV_residue_scipy, optimize.calc_MDV_residue_nlopt,optimize.fit_r_mdv_scipy,optimize.fit_r_mdv_nlopt),
+                # ("numpy","nlopt","scipy","scipy.integrate"))])
             elif method == "deep":
                 for i, flux_temp in enumerate(flux):
-                    parameters = (configuration, self.experiments, numbers, vectors, self.matrixinv, self.calmdv_text, flux_temp)
+                    parameters = (configuration, self.experiments, numbers,
+                                  vectors, self.matrixinv, self.calmdv_text,
+                                  flux_temp)
                     jobs.append(parameters)
-                result = Parallel(n_jobs=ncpus)([delayed(optimize.fit_r_mdv_deep)(configuration, experiments, numbers, vectors, matrixinv, calmdv_text, flux_temp) for (configuration, experiments, numbers, vectors, matrixinv, calmdv_text, flux_temp) in jobs])
+                result = Parallel(n_jobs=ncpus)([
+                    delayed(optimize.fit_r_mdv_deep)(configuration,
+                                                     experiments, numbers,
+                                                     vectors, matrixinv,
+                                                     calmdv_text, flux_temp)
+                    for (configuration, experiments, numbers, vectors,
+                         matrixinv, calmdv_text, flux_temp) in jobs
+                ])
 
-                    #jobs.append([i, job_server.submit(optimize.fit_r_mdv_deep, parameters,
-                    # (optimize.calc_MDV_residue_scipy, optimize.calc_MDV_residue_nlopt,optimize.fit_r_mdv_scipy,optimize.fit_r_mdv_nlopt),
-                    # ("numpy","nlopt","scipy","scipy.integrate"))])
+                #jobs.append([i, job_server.submit(optimize.fit_r_mdv_deep, parameters,
+                # (optimize.calc_MDV_residue_scipy, optimize.calc_MDV_residue_nlopt,optimize.fit_r_mdv_scipy,optimize.fit_r_mdv_nlopt),
+                # ("numpy","nlopt","scipy","scipy.integrate"))])
             else:
                 for i, flux_temp in enumerate(flux):
-                    parameters = (configuration, self.experiments, numbers, vectors, self.matrixinv, self.calmdv_text, flux_temp)
+                    parameters = (configuration, self.experiments, numbers,
+                                  vectors, self.matrixinv, self.calmdv_text,
+                                  flux_temp)
                     jobs.append(parameters)
-                result = Parallel(n_jobs=ncpus)([delayed(optimize.fit_r_mdv_deep)(configuration, experiments, numbers, vectors, matrixinv, calmdv_text, flux_temp) for (configuration, experiments, numbers, vectors, matrixinv, calmdv_text, flux_temp) in jobs])
+                result = Parallel(n_jobs=ncpus)([
+                    delayed(optimize.fit_r_mdv_deep)(configuration,
+                                                     experiments, numbers,
+                                                     vectors, matrixinv,
+                                                     calmdv_text, flux_temp)
+                    for (configuration, experiments, numbers, vectors,
+                         matrixinv, calmdv_text, flux_temp) in jobs
+                ])
 
-                    #jobs.append([i, job_server.submit(optimize.fit_r_mdv_deep, parameters,
-                    # (optimize.calc_MDV_residue_scipy, optimize.calc_MDV_residue_nlopt,optimize.fit_r_mdv_scipy,optimize.fit_r_mdv_nlopt),
-                    # ("numpy","nlopt","scipy","scipy.integrate"))])
-
+                #jobs.append([i, job_server.submit(optimize.fit_r_mdv_deep, parameters,
+                # (optimize.calc_MDV_residue_scipy, optimize.calc_MDV_residue_nlopt,optimize.fit_r_mdv_scipy,optimize.fit_r_mdv_nlopt),
+                # ("numpy","nlopt","scipy","scipy.integrate"))])
 
             state_list = []
             kai_list = []
@@ -3496,24 +4353,30 @@ class MetabolicModel:
                 flux_list.append(self.generate_state_dict(flux))
                 Rm_ind_sol_list.append(Rm_ind_sol)
                 if (self.configuration['callbacklevel'] >= 3):
-                    print('RSS',':', rss, state)
+                    print('RSS', ':', rss, state)
 
             order = list(range(len(state_list)))
-            order.sort(key = lambda x: kai_list[x])
+            order.sort(key=lambda x: kai_list[x])
             states = [state_list[x] for x in order]
             kais = [kai_list[x] for x in order]
             fluxes = [flux_list[x] for x in order]
 
-
             if self.configuration['callbacklevel'] == 3:
-                print(len(fluxes), "fitting tasks in paralell processing mode were finished.")
+                print(
+                    len(fluxes),
+                    "fitting tasks in paralell processing mode were finished.")
             if self.configuration['callbacklevel'] == 4:
-                print(len(fluxes), "fitting tasks in paralell processing mode were finished with finishing state",states[0],".")
+                print(
+                    len(fluxes),
+                    "fitting tasks in paralell processing mode were finished with finishing state",
+                    states[0], ".")
             if self.configuration['callbacklevel'] >= 5:
-                print(len(fluxes), "fitting tasks in paralell processing mode were finished with finishing state",states[0]," RSS of best one is: ", kais[0])
+                print(
+                    len(fluxes),
+                    "fitting tasks in paralell processing mode were finished with finishing state",
+                    states[0], " RSS of best one is: ", kais[0])
 
             return states, kais, fluxes
-
         """
         else:
             #Set callbacklevel
@@ -3600,8 +4463,11 @@ class MetabolicModel:
             fluxes = [flux_list[x] for x in order]
             return states, kais, fluxes
         """
-
-    def show_results_in_map(self, flux, mapfilename, outputfilename, formattext = ".1f"):
+    def show_results_in_map(self,
+                            flux,
+                            mapfilename,
+                            outputfilename,
+                            formattext=".1f"):
         """
         Method to project metabolic state data into metabolic file (.GML).
 
@@ -3624,78 +4490,86 @@ class MetabolicModel:
 
 
         """
-        kegg_id=[]
-        Id2value={}
+        kegg_id = []
+        Id2value = {}
+
         def idsep(ids):
             idsori = ids
-            ids = re.sub("\)\s*\(",")(",ids)
-            ids = re.sub("^\(","((",ids)
-            ids = re.sub("\)\(","))((",ids)
-            ids = re.sub("\)$","))",ids)
+            ids = re.sub("\)\s*\(", ")(", ids)
+            ids = re.sub("^\(", "((", ids)
+            ids = re.sub("\)\(", "))((", ids)
+            ids = re.sub("\)$", "))", ids)
             #idlist = re.findall("\(\([^:]*?:[^:]*?\)\)", ids)
             idlist = []
             for idtemp in re.findall("\(\(.*?\)\)", ids):
                 idtemp = re.sub("\(\(", "(", idtemp)
                 idtemp = re.sub("\)\)", ")", idtemp)
                 idlist.append(idtemp)
-            return(idlist)
-
+            return (idlist)
 
         for rid in self.reaction_ids:
             ids = self.reactions[rid]['externalids']
             for id in idsep(ids):
                 kegg_id.append(id)
-                Id2value[id]=flux['reaction'][rid]['value']
+                Id2value[id] = flux['reaction'][rid]['value']
         for rid in self.reversible_ids:
             ids = self.reversible[rid]['externalids']
             for id in idsep(ids):
                 kegg_id.append(id)
-                Id2value[id]=flux['reversible'][rid]['value']
+                Id2value[id] = flux['reversible'][rid]['value']
         for rid in self.metabolite_ids:
             ids = self.metabolites[rid]['externalids']
             for id in idsep(ids):
                 kegg_id.append(id)
-                Id2value[id]=flux['metabolite'][rid]['value']
+                Id2value[id] = flux['metabolite'][rid]['value']
 
+        node = "off"
+        text = ""
+        replace = "off"
+        memo_off = []
+        memo = ""
+        kegg = []
+        label = []
 
-        node="off"
-        text=""
-        replace="off"
-        memo_off=[]
-        memo=""
-        kegg=[]
-        label=[]
-
-        with open(mapfilename,'r') as f:
+        with open(mapfilename, 'r') as f:
             for line in f:
                 if "  node [\n" in line:
-                    node="on"
+                    node = "on"
 
-                if node=="off":
-                    text=text+line
-                if node=="on":
-                    memo=memo+line
-                    if line=="  ]\n":
+                if node == "off":
+                    text = text + line
+                if node == "on":
+                    memo = memo + line
+                    if line == "  ]\n":
                         for id in kegg_id:
                             if id in memo:
-                                temp = "{:"+formattext+"}"
+                                temp = "{:" + formattext + "}"
                                 templine = temp.format(Id2value[id])
-                                memo_mod=re.sub('label "\d+(\.\d+)?"',"label "+'''"'''+templine+'''"''',memo)
-                                text=text+memo_mod
-                                replace="on"
-                        if replace=="off":
-                            text=text+memo
-                        node='off'
-                        replace="off"
-                        memo=''
-
-
+                                memo_mod = re.sub(
+                                    'label "\d+(\.\d+)?"',
+                                    "label " + '''"''' + templine + '''"''',
+                                    memo)
+                                text = text + memo_mod
+                                replace = "on"
+                        if replace == "off":
+                            text = text + memo
+                        node = 'off'
+                        replace = "off"
+                        memo = ''
 
         with open(outputfilename, mode='w') as f:
             f.write(text)
         f.close()
 
-    def show_results(self, input, flux = "on", rss = "on", mdv = "on", pool_size = "off", checkrss= "off", filename = "", format = "csv"):
+    def show_results(self,
+                     input,
+                     flux="on",
+                     rss="on",
+                     mdv="on",
+                     pool_size="off",
+                     checkrss="off",
+                     filename="",
+                     format="csv"):
         """
         Method to output metabolic state data.
 
@@ -3734,14 +4608,19 @@ class MetabolicModel:
         #
         reaction_header.extend(['Id', 'Reaction', "External ids"])
         reaction_header.extend([z[0] for z in input])
-        reaction_header.extend(['Type','Value', 'Stdev',' lb','ub', 'Atom_mapping','Reversible'])
+        reaction_header.extend([
+            'Type', 'Value', 'Stdev', ' lb', 'ub', 'Atom_mapping', 'Reversible'
+        ])
         #print reaction_header
         #
         # Metabolite header header
         #
         metabolites_header.extend(['Id', 'C_number', "External ids"])
         metabolites_header.extend([z[0] for z in input])
-        metabolites_header.extend(['Type','Value', 'Stdev','lb','ub','Excreted','Symmetry', 'carbonsource'])
+        metabolites_header.extend([
+            'Type', 'Value', 'Stdev', 'lb', 'ub', 'Excreted', 'Symmetry',
+            'carbonsource'
+        ])
         #
         # RSS
         #
@@ -3754,7 +4633,7 @@ class MetabolicModel:
         rssd[1].extend(['Thres', '', ""])
         rssd[2].extend(['p_value', '', ""])
         for fluxd in input:
-            pvalue, rss_thres = self.goodness_of_fit(fluxd[1], alpha = 0.05)
+            pvalue, rss_thres = self.goodness_of_fit(fluxd[1], alpha=0.05)
             rssd[1].append(rss_thres)
             rssd[2].append(pvalue)
         #
@@ -3762,18 +4641,28 @@ class MetabolicModel:
         #
         for i, metid in enumerate(self.metabolite_ids):
             metabolites.append([])
-            metabolites[i].append(metid)# 1 id
-            metabolites[i].append(self.metabolites[metid]['C_number'])# 2 reaction
-            metabolites[i].append(self.metabolites[metid]['externalids'])# 2 reaction
-            metabolites[i].extend([fluxdd["metabolite"][metid]['value'] for (name, fluxdd) in input])# 4 values
-            metabolites[i].append(self.metabolites[metid]['type'])# 8 type
-            metabolites[i].append(self.metabolites[metid]['value'])# 9 met value (measured)
-            metabolites[i].append(self.metabolites[metid]['stdev'])# 10 met std
-            metabolites[i].append(self.metabolites[metid]['lb'])# 6 lb
-            metabolites[i].append(self.metabolites[metid]['ub'])# 7 ub
-            metabolites[i].append(self.metabolites[metid]['excreted'])# 5 atom mapping
-            metabolites[i].append(self.metabolites[metid]['symmetry'])# 11 symmetry
-            metabolites[i].append(self.metabolites[metid]['carbonsource'])# 12 revserible
+            metabolites[i].append(metid)  # 1 id
+            metabolites[i].append(
+                self.metabolites[metid]['C_number'])  # 2 reaction
+            metabolites[i].append(
+                self.metabolites[metid]['externalids'])  # 2 reaction
+            metabolites[i].extend([
+                fluxdd["metabolite"][metid]['value']
+                for (name, fluxdd) in input
+            ])  # 4 values
+            metabolites[i].append(self.metabolites[metid]['type'])  # 8 type
+            metabolites[i].append(
+                self.metabolites[metid]['value'])  # 9 met value (measured)
+            metabolites[i].append(
+                self.metabolites[metid]['stdev'])  # 10 met std
+            metabolites[i].append(self.metabolites[metid]['lb'])  # 6 lb
+            metabolites[i].append(self.metabolites[metid]['ub'])  # 7 ub
+            metabolites[i].append(
+                self.metabolites[metid]['excreted'])  # 5 atom mapping
+            metabolites[i].append(
+                self.metabolites[metid]['symmetry'])  # 11 symmetry
+            metabolites[i].append(
+                self.metabolites[metid]['carbonsource'])  # 12 revserible
             #
             #metabolites rss
             #
@@ -3781,34 +4670,45 @@ class MetabolicModel:
                 continue
             value = self.metabolites[metid]['value']
             stdev = self.metabolites[metid]['stdev']
-            fluxlist = [fluxdd["metabolite"][metid]['value'] for (name, fluxdd) in input]
+            fluxlist = [
+                fluxdd["metabolite"][metid]['value']
+                for (name, fluxdd) in input
+            ]
             temprssd = []
-            temprssd.append(metid)# 1 id
-            temprssd.append(self.metabolites[metid]['C_number'])# 2 reaction
-            temprssd.append(self.metabolites[metid]['externalids'])# 2 reaction
-            temprssd.extend([((x-value)/stdev)**2 for x in fluxlist])# 4 values
-            temprssd.append(self.metabolites[metid]['type'])# 8 type
-            temprssd.append(self.metabolites[metid]['value'])# 9 met value (measured)
-            temprssd.append(self.metabolites[metid]['stdev'])# 10 met std
+            temprssd.append(metid)  # 1 id
+            temprssd.append(self.metabolites[metid]['C_number'])  # 2 reaction
+            temprssd.append(
+                self.metabolites[metid]['externalids'])  # 2 reaction
+            temprssd.extend([((x - value) / stdev)**2
+                             for x in fluxlist])  # 4 values
+            temprssd.append(self.metabolites[metid]['type'])  # 8 type
+            temprssd.append(
+                self.metabolites[metid]['value'])  # 9 met value (measured)
+            temprssd.append(self.metabolites[metid]['stdev'])  # 10 met std
             rssdata.append(temprssd)
-
 
         #
         # Reaction and fluxes
         #
         for i, rid in enumerate(self.reaction_ids):
             reaction.append([])
-            reaction[i].append(rid)# 1 id
-            reaction[i].append(self.reactions[rid]['stoichiometry'])# 2 reaction
-            reaction[i].append(self.reactions[rid]['externalids'])# 3 external ids
-            reaction[i].extend([fluxdd["reaction"][rid]['value'] for (name, fluxdd) in input])# 4 values
-            reaction[i].append(self.reactions[rid]['type'])# 8 type
-            reaction[i].append(self.reactions[rid]['value'])# 9 flux value
-            reaction[i].append(self.reactions[rid]['stdev'])# 10 flux std
-            reaction[i].append(self.reactions[rid]['lb'])# 6 lb
-            reaction[i].append(self.reactions[rid]['ub'])# 7 ub
-            reaction[i].append(self.reactions[rid]['atommap'])# 5 atom mapping
-            reaction[i].append(self.reactions[rid]['reversible'])# 11 revserible#id
+            reaction[i].append(rid)  # 1 id
+            reaction[i].append(
+                self.reactions[rid]['stoichiometry'])  # 2 reaction
+            reaction[i].append(
+                self.reactions[rid]['externalids'])  # 3 external ids
+            reaction[i].extend([
+                fluxdd["reaction"][rid]['value'] for (name, fluxdd) in input
+            ])  # 4 values
+            reaction[i].append(self.reactions[rid]['type'])  # 8 type
+            reaction[i].append(self.reactions[rid]['value'])  # 9 flux value
+            reaction[i].append(self.reactions[rid]['stdev'])  # 10 flux std
+            reaction[i].append(self.reactions[rid]['lb'])  # 6 lb
+            reaction[i].append(self.reactions[rid]['ub'])  # 7 ub
+            reaction[i].append(
+                self.reactions[rid]['atommap'])  # 5 atom mapping
+            reaction[i].append(
+                self.reactions[rid]['reversible'])  # 11 revserible#id
             #
             # RSS
             #
@@ -3817,15 +4717,19 @@ class MetabolicModel:
 
             value = self.reactions[rid]['value']
             stdev = self.reactions[rid]['stdev']
-            fluxlist =[fluxdd["reaction"][rid]['value'] for (name, fluxdd) in input]
+            fluxlist = [
+                fluxdd["reaction"][rid]['value'] for (name, fluxdd) in input
+            ]
             temprssd = []
-            temprssd.append(rid)# 1 id
-            temprssd.append(self.reactions[rid]['stoichiometry'])# 2 reaction
-            temprssd.append(self.reactions[rid]['externalids'])# 3 external ids
-            temprssd.extend([((x-value)/stdev)**2 for x in fluxlist])# 4 values
-            temprssd.append(self.reactions[rid]['type'])# 8 type
-            temprssd.append(self.reactions[rid]['value'])# 9 flux value
-            temprssd.append(self.reactions[rid]['stdev'])# 10 flux std
+            temprssd.append(rid)  # 1 id
+            temprssd.append(self.reactions[rid]['stoichiometry'])  # 2 reaction
+            temprssd.append(
+                self.reactions[rid]['externalids'])  # 3 external ids
+            temprssd.extend([((x - value) / stdev)**2
+                             for x in fluxlist])  # 4 values
+            temprssd.append(self.reactions[rid]['type'])  # 8 type
+            temprssd.append(self.reactions[rid]['value'])  # 9 flux value
+            temprssd.append(self.reactions[rid]['stdev'])  # 10 flux std
             rssdata.append(temprssd)
 
         reversible_list = self.reversible.keys()
@@ -3834,17 +4738,23 @@ class MetabolicModel:
             forward = self.reversible[rid]['forward']
             reverse = self.reversible[rid]['reverse']
             reaction.append([])
-            reaction[length + i].append(rid)# 1 id
-            reaction[length + i].append(str(forward + "<=>" + reverse))# 2 reaction
-            reaction[length + i].append(self.reversible[rid]['externalids'])# 3 reaction
-            reaction[length + i].extend([fluxdd["reversible"][rid]['value'] for (name, fluxdd) in input])# 4 values
-            reaction[length + i].append(self.reversible[rid]['type'])# 8 type
-            reaction[length + i].append(self.reversible[rid]['value'])# 9 flux value
-            reaction[length + i].append(self.reversible[rid]['stdev'])# 10 flux std
-            reaction[length + i].append(self.reversible[rid]['lb'])# 6 lb
-            reaction[length + i].append(self.reversible[rid]['ub'])# 7 ub
-            reaction[length + i].append('')# 5 atom mapping
-            reaction[length + i].append('')# 11 revserible#id
+            reaction[length + i].append(rid)  # 1 id
+            reaction[length + i].append(str(forward + "<=>" +
+                                            reverse))  # 2 reaction
+            reaction[length + i].append(
+                self.reversible[rid]['externalids'])  # 3 reaction
+            reaction[length + i].extend([
+                fluxdd["reversible"][rid]['value'] for (name, fluxdd) in input
+            ])  # 4 values
+            reaction[length + i].append(self.reversible[rid]['type'])  # 8 type
+            reaction[length + i].append(
+                self.reversible[rid]['value'])  # 9 flux value
+            reaction[length + i].append(
+                self.reversible[rid]['stdev'])  # 10 flux std
+            reaction[length + i].append(self.reversible[rid]['lb'])  # 6 lb
+            reaction[length + i].append(self.reversible[rid]['ub'])  # 7 ub
+            reaction[length + i].append('')  # 5 atom mapping
+            reaction[length + i].append('')  # 11 revserible#id
             #
             # RSS
             #
@@ -3853,18 +4763,21 @@ class MetabolicModel:
 
             value = self.reversible[rid]['value']
             stdev = self.reversible[rid]['stdev']
-            fluxlist =[fluxdd["reversible"][rid]['value'] for (name, fluxdd) in input]
+            fluxlist = [
+                fluxdd["reversible"][rid]['value'] for (name, fluxdd) in input
+            ]
 
             forward = self.reversible[rid]['forward']
             reverse = self.reversible[rid]['reverse']
             temprssd = []
-            temprssd.append(rid)# 1 id
-            temprssd.append(str(forward + "<=>" + reverse))# 2 reaction
-            temprssd.append(self.reversible[rid]['externalids'])# 3 reaction
-            temprssd.extend([((x-value)/stdev)**2 for x in fluxlist])# 4 values
-            temprssd.append(self.reversible[rid]['type'])# 8 type
-            temprssd.append(self.reversible[rid]['value'])# 9 flux value
-            temprssd.append(self.reversible[rid]['stdev'])# 10 flux std
+            temprssd.append(rid)  # 1 id
+            temprssd.append(str(forward + "<=>" + reverse))  # 2 reaction
+            temprssd.append(self.reversible[rid]['externalids'])  # 3 reaction
+            temprssd.extend([((x - value) / stdev)**2
+                             for x in fluxlist])  # 4 values
+            temprssd.append(self.reversible[rid]['type'])  # 8 type
+            temprssd.append(self.reversible[rid]['value'])  # 9 flux value
+            temprssd.append(self.reversible[rid]['stdev'])  # 10 flux std
             rssdata.append(temprssd)
 
         #print reaction
@@ -3874,32 +4787,44 @@ class MetabolicModel:
         #
         mdv_header.extend(['Experiment', 'Fragment_Num', "Time"])
         mdv_header.extend([fluxd[0] for fluxd in input])
-        mdv_header.extend(['Use','Ratio','Stdev'])
+        mdv_header.extend(['Use', 'Ratio', 'Stdev'])
         #
         # MDVs
         #
         for ex_id in sorted(self.experiments.keys()):
             mdv_data = []
             target_fragments_temp = self.target_fragments.keys()
-            mdv_carbon_sources_temp = self.experiments[ex_id]['mdv_carbon_sources']
+            mdv_carbon_sources_temp = self.experiments[ex_id][
+                'mdv_carbon_sources']
             if self.experiments[ex_id]['mode'] == "ST":
                 for (name, fluxd) in input:
-                    tmp_r = [fluxd["reaction"][x]['value'] for x in self.reaction_ids]
-                    mdv_exp, mdv_hash = optimize.calc_MDV_from_flux(tmp_r, target_fragments_temp, mdv_carbon_sources_temp, self.func)
+                    tmp_r = [
+                        fluxd["reaction"][x]['value']
+                        for x in self.reaction_ids
+                    ]
+                    mdv_exp, mdv_hash = optimize.calc_MDV_from_flux(
+                        tmp_r, target_fragments_temp, mdv_carbon_sources_temp,
+                        self.func)
                     mdv_data.append((name, mdv_hash))
                 #if len(self.experiments[ex_id]["timepoint"]) == 0:
                 for i in range(len(self.experiments[ex_id]['mdv_ids'])):
                     mdvd.append([])
-                    mdvd[len(mdvd)-1].append(ex_id) # 1 ex
+                    mdvd[len(mdvd) - 1].append(ex_id)  # 1 ex
                     fragment_number = self.experiments[ex_id]['mdv_ids'][i]
-                    mdvd[len(mdvd)-1].append(fragment_number) # 2 fragment
-                    mdvd[len(mdvd)-1].append(int(0)) # 3 Timecourse
+                    mdvd[len(mdvd) - 1].append(fragment_number)  # 2 fragment
+                    mdvd[len(mdvd) - 1].append(int(0))  # 3 Timecourse
                     number = int(fragment_number.split("_")[-1])
                     fragment = "_".join(fragment_number.split("_")[:-1])
-                    mdvd[len(mdvd)-1].extend([mdvdd[1][fragment][number] for mdvdd in mdv_data])
-                    mdvd[len(mdvd)-1].append(self.experiments[ex_id]['mdv_use'][i]) # 6 use or not
-                    mdvd[len(mdvd)-1].append(self.experiments[ex_id]['mdv_exp_original'][i]) # 7 ratio
-                    mdvd[len(mdvd)-1].append(self.experiments[ex_id]['mdv_std_original'][i]) # 7 stdev
+                    mdvd[len(mdvd) - 1].extend(
+                        [mdvdd[1][fragment][number] for mdvdd in mdv_data])
+                    mdvd[len(mdvd) - 1].append(
+                        self.experiments[ex_id]['mdv_use'][i])  # 6 use or not
+                    mdvd[len(mdvd) -
+                         1].append(self.experiments[ex_id]['mdv_exp_original']
+                                   [i])  # 7 ratio
+                    mdvd[len(mdvd) -
+                         1].append(self.experiments[ex_id]['mdv_std_original']
+                                   [i])  # 7 stdev
                     #
                     # RSS
                     #
@@ -3908,43 +4833,68 @@ class MetabolicModel:
 
                     value = self.experiments[ex_id]['mdv_exp_original'][i]
                     stdev = self.experiments[ex_id]['mdv_std_original'][i]
-                    fluxlist =[mdvdd[1][fragment][number] for mdvdd in mdv_data]
+                    fluxlist = [
+                        mdvdd[1][fragment][number] for mdvdd in mdv_data
+                    ]
 
                     temprssd = []
-                    temprssd.append(ex_id) # 1 ex
-                    temprssd.append(fragment_number) # 2 fragment
-                    temprssd.append(int(0)) # 3 Timecourse
-                    temprssd.extend([((x-value)/stdev)**2 for x in fluxlist])
-                    temprssd.append(self.experiments[ex_id]['mdv_use'][i]) # 6 use or not
-                    temprssd.append(self.experiments[ex_id]['mdv_exp_original'][i]) # 7 ratio
-                    temprssd.append(self.experiments[ex_id]['mdv_std_original'][i]) # 7 stdev
+                    temprssd.append(ex_id)  # 1 ex
+                    temprssd.append(fragment_number)  # 2 fragment
+                    temprssd.append(int(0))  # 3 Timecourse
+                    temprssd.extend([((x - value) / stdev)**2
+                                     for x in fluxlist])
+                    temprssd.append(
+                        self.experiments[ex_id]['mdv_use'][i])  # 6 use or not
+                    temprssd.append(self.experiments[ex_id]['mdv_exp_original']
+                                    [i])  # 7 ratio
+                    temprssd.append(self.experiments[ex_id]['mdv_std_original']
+                                    [i])  # 7 stdev
                     rssdata.append(temprssd)
 
             elif self.experiments[ex_id]['mode'] == "INST":
                 timepoints = self.experiments[ex_id]['timepoint']
-                timepoint_id={}
-                for n,point in enumerate(timepoints):
-                    timepoint_id[point]=n
+                timepoint_id = {}
+                for n, point in enumerate(timepoints):
+                    timepoint_id[point] = n
                 for (name, fluxd) in input:
-                    tmp_r = [fluxd[group][id]["value"] for (group, id) in self.vector["ids"]]
-                    mdv_exp, mdv_hash = optimize.calc_MDV_from_flux(tmp_r, target_fragments_temp, mdv_carbon_sources_temp, self.func, timepoint = timepoints, y0temp = self.experiments[ex_id]['y0'])
+                    tmp_r = [
+                        fluxd[group][id]["value"]
+                        for (group, id) in self.vector["ids"]
+                    ]
+                    mdv_exp, mdv_hash = optimize.calc_MDV_from_flux(
+                        tmp_r,
+                        target_fragments_temp,
+                        mdv_carbon_sources_temp,
+                        self.func,
+                        timepoint=timepoints,
+                        y0temp=self.experiments[ex_id]['y0'])
                     mdv_data.append((name, mdv_hash))
-                timepoint_list= sorted(timepoints*int(len(self.experiments[ex_id]['mdv_ids'])/len(timepoints)))
+                timepoint_list = sorted(timepoints * int(
+                    len(self.experiments[ex_id]['mdv_ids']) / len(timepoints)))
 
                 #timepoint_list= sorted(timepoints*(len(self.experiments[ex_id]['mdv_ids'])))
                 for j in range(len(self.experiments[ex_id]['mdv_ids'])):
                     mdvd.append([])
-                    mdvd[len(mdvd)-1].append(ex_id) # 1 ex
+                    mdvd[len(mdvd) - 1].append(ex_id)  # 1 ex
                     fragment_number = self.experiments[ex_id]['mdv_ids'][j]
                     number = int(fragment_number.split("_")[-1])
                     fragment = "_".join(fragment_number.split("_")[:-1])
-                    mdvd[len(mdvd)-1].append(fragment_number) # 2 fragment
-                    mdvd[len(mdvd)-1].append(timepoint_list[j])   # 3 timepoint
-                    mdvd[len(mdvd)-1].extend([mdvdd[1][fragment][timepoint_id[timepoint_list[j]]][number] for mdvdd in mdv_data])
-                    mdvd[len(mdvd)-1].append(ex_id) # 1 ex
-                    mdvd[len(mdvd)-1].append(self.experiments[ex_id]['mdv_use'][j]) # 6 use or not
-                    mdvd[len(mdvd)-1].append(self.experiments[ex_id]['mdv_exp_original'][j]) # 7 ratio
-                    mdvd[len(mdvd)-1].append(self.experiments[ex_id]['mdv_std_original'][j]) # 7 stdev
+                    mdvd[len(mdvd) - 1].append(fragment_number)  # 2 fragment
+                    mdvd[len(mdvd) - 1].append(
+                        timepoint_list[j])  # 3 timepoint
+                    mdvd[len(mdvd) - 1].extend([
+                        mdvdd[1][fragment][timepoint_id[timepoint_list[j]]]
+                        [number] for mdvdd in mdv_data
+                    ])
+                    mdvd[len(mdvd) - 1].append(ex_id)  # 1 ex
+                    mdvd[len(mdvd) - 1].append(
+                        self.experiments[ex_id]['mdv_use'][j])  # 6 use or not
+                    mdvd[len(mdvd) -
+                         1].append(self.experiments[ex_id]['mdv_exp_original']
+                                   [j])  # 7 ratio
+                    mdvd[len(mdvd) -
+                         1].append(self.experiments[ex_id]['mdv_std_original']
+                                   [j])  # 7 stdev
                     #
                     # RSS
                     #
@@ -3952,20 +4902,26 @@ class MetabolicModel:
                         continue
                     value = self.experiments[ex_id]['mdv_exp_original'][j]
                     stdev = self.experiments[ex_id]['mdv_std_original'][j]
-                    fluxlist =[mdvdd[1][fragment][timepoint_id[timepoint_list[j]]][number] for mdvdd in mdv_data]
+                    fluxlist = [
+                        mdvdd[1][fragment][timepoint_id[timepoint_list[j]]]
+                        [number] for mdvdd in mdv_data
+                    ]
 
                     temprssd = []
-                    temprssd.append(ex_id) # 1 ex
+                    temprssd.append(ex_id)  # 1 ex
 
-                    temprssd.append(fragment_number) # 2 fragment
-                    temprssd.append(timepoint_list[j])   # 3 timepoint
-                    temprssd.extend([((x-value)/stdev)**2 for x in fluxlist])
-                    temprssd.append(ex_id) # 1 ex
-                    temprssd.append(self.experiments[ex_id]['mdv_use'][j]) # 6 use or not
-                    temprssd.append(self.experiments[ex_id]['mdv_exp_original'][j]) # 7 ratio
-                    temprssd.append(self.experiments[ex_id]['mdv_std_original'][j]) # 7 stdev
+                    temprssd.append(fragment_number)  # 2 fragment
+                    temprssd.append(timepoint_list[j])  # 3 timepoint
+                    temprssd.extend([((x - value) / stdev)**2
+                                     for x in fluxlist])
+                    temprssd.append(ex_id)  # 1 ex
+                    temprssd.append(
+                        self.experiments[ex_id]['mdv_use'][j])  # 6 use or not
+                    temprssd.append(self.experiments[ex_id]['mdv_exp_original']
+                                    [j])  # 7 ratio
+                    temprssd.append(self.experiments[ex_id]['mdv_std_original']
+                                    [j])  # 7 stdev
                     rssdata.append(temprssd)
-
 
         #
         #
@@ -3997,7 +4953,6 @@ class MetabolicModel:
                     writer.writerow(mdv_header)
                     writer.writerows(rssdata)
 
-
         else:
             text = ""
             if rss == "on":
@@ -4006,14 +4961,15 @@ class MetabolicModel:
                 text = text + "{0:25.25s}".format(reaction_header[1])
                 text = text + "{0:10.10s}".format(reaction_header[2])
                 for i in range(len(input)):
-                    text = text + "{0:>8.7s}".format(str(reaction_header[3+i]))
+                    text = text + "{0:>8.7s}".format(
+                        str(reaction_header[3 + i]))
                 text = text + "\n"
                 for data in rssd:
                     text = text + "{0:15.15s}".format(data[0])
                     text = text + "{0:25.25s}".format(data[1])
                     text = text + "{0:10.10s}".format(data[2])
                     for i in range(len(input)):
-                        text = text + "{0:>8.2f}".format(data[3+i])
+                        text = text + "{0:>8.2f}".format(data[3 + i])
                     text = text + "\n"
 
             if flux == "on":
@@ -4024,14 +4980,16 @@ class MetabolicModel:
                 step = 2
                 for i in range(len(input)):
                     step = step + 1
-                    text = text + "{0:>8.7s}".format(str(reaction_header[step]))
-                text = text + " " + "{0:8.7s}".format(reaction_header[step + 1])
+                    text = text + "{0:>8.7s}".format(str(
+                        reaction_header[step]))
+                text = text + " " + "{0:8.7s}".format(
+                    reaction_header[step + 1])
                 text = text + "{0:>6.5s}".format(reaction_header[step + 2])
                 text = text + "{0:>6.5s}".format(reaction_header[step + 3])
                 text = text + "{0:>6.5s}".format(reaction_header[step + 4])
                 text = text + "{0:>6.5s}".format(reaction_header[step + 5])
-                text = text + " " + "{0:25.25s}".format(reaction_header[step + 6])
-
+                text = text + " " + "{0:25.25s}".format(
+                    reaction_header[step + 6])
 
                 text = text + "\n"
                 for data in reaction:
@@ -4058,16 +5016,23 @@ class MetabolicModel:
                 step = 2
                 for i in range(len(input)):
                     step = step + 1
-                    text = text + "{0:>8.7s}".format(str(metabolites_header[step]))
-                text = text + " "+"{0:8.7s}".format(metabolites_header[step + 1])
+                    text = text + "{0:>8.7s}".format(
+                        str(metabolites_header[step]))
+                text = text + " " + "{0:8.7s}".format(
+                    metabolites_header[step + 1])
                 text = text + "{0:>6.6s}".format(metabolites_header[step + 2])
                 text = text + "{0:>6.6s}".format(metabolites_header[step + 3])
 
-                text = text + " "+"{0:6.6s}".format(metabolites_header[step + 4])
-                text = text + " "+"{0:6.6s}".format(metabolites_header[step + 5])
-                text = text + " "+"{0:9.9s}".format(metabolites_header[step + 6])
-                text = text + " "+"{0:9.9s}".format(metabolites_header[step + 7])
-                text = text + " "+"{0:9.9s}".format(metabolites_header[step + 8])
+                text = text + " " + "{0:6.6s}".format(
+                    metabolites_header[step + 4])
+                text = text + " " + "{0:6.6s}".format(
+                    metabolites_header[step + 5])
+                text = text + " " + "{0:9.9s}".format(
+                    metabolites_header[step + 6])
+                text = text + " " + "{0:9.9s}".format(
+                    metabolites_header[step + 7])
+                text = text + " " + "{0:9.9s}".format(
+                    metabolites_header[step + 8])
                 text = text + "\n"
                 for data in metabolites:
                     text = text + "{0:15.15s}".format(data[0])
@@ -4077,15 +5042,17 @@ class MetabolicModel:
                     for i in range(len(input)):
                         step = step + 1
                         text = text + "{0:>8.3f}".format(data[step])
-                    text = text + " "+"{0:8.7s}".format(data[step + 1])
+                    text = text + " " + "{0:8.7s}".format(data[step + 1])
                     text = text + "{0:6.1f}".format(data[step + 2])
                     text = text + "{0:6.1f}".format(data[step + 3])
 
-                    text = text + " "+"{0:6.3f}".format(float(data[step + 4]))
-                    text = text + " "+"{0:6.1f}".format(float(data[step + 5]))
-                    text = text + " "+"{0:9.9s}".format(data[step + 6])
-                    text = text + " "+"{0:9.9s}".format(data[step + 7])
-                    text = text + " "+"{0:9.9s}".format(data[step + 8])
+                    text = text + " " + "{0:6.3f}".format(float(
+                        data[step + 4]))
+                    text = text + " " + "{0:6.1f}".format(float(
+                        data[step + 5]))
+                    text = text + " " + "{0:9.9s}".format(data[step + 6])
+                    text = text + " " + "{0:9.9s}".format(data[step + 7])
+                    text = text + " " + "{0:9.9s}".format(data[step + 8])
 
                     text = text + "\n"
 
@@ -4094,7 +5061,7 @@ class MetabolicModel:
                 text = text + "{0:25.10s}".format(mdv_header[1])
                 text = text + "{0:10.5s}".format(mdv_header[2])
                 for i in range(len(input)):
-                    text = text + "{0:>8.7s}".format(str(mdv_header[3+i]))
+                    text = text + "{0:>8.7s}".format(str(mdv_header[3 + i]))
                 text = text + "{0:>8.5s}".format(str(mdv_header[-3]))
                 text = text + " " + "{0:>6.6s}".format(mdv_header[-2])
                 text = text + "{0:>6.6s}".format(mdv_header[-1])
@@ -4104,7 +5071,7 @@ class MetabolicModel:
                     text = text + "{0:25.15s}".format(data[1])
                     text = text + "{0:<10.2f}".format(data[2])
                     for i in range(len(input)):
-                        text = text + "{0:8.4f}".format(data[3+i])
+                        text = text + "{0:8.4f}".format(data[3 + i])
                     text = text + "{0:>8.5s}".format(str(data[-3]))
                     text = text + " " + "{0:6.4f}".format(data[-2])
                     text = text + "{0:6.2f}".format(data[-1])
@@ -4114,7 +5081,7 @@ class MetabolicModel:
                 text = text + "{0:25.10s}".format(mdv_header[1])
                 text = text + "{0:10.5s}".format(mdv_header[2])
                 for i in range(len(input)):
-                    text = text + "{0:>8.7s}".format(str(mdv_header[3+i]))
+                    text = text + "{0:>8.7s}".format(str(mdv_header[3 + i]))
                 text = text + "{0:>8.5s}".format(str(mdv_header[-3]))
                 text = text + " " + "{0:>6.6s}".format(mdv_header[-2])
                 text = text + "{0:>6.6s}".format(mdv_header[-1])
@@ -4124,16 +5091,15 @@ class MetabolicModel:
                     text = text + "{0:25.15s}".format(data[1])
                     text = text + "{0:<10.2s}".format(str(data[2]))
                     for i in range(len(input)):
-                        text = text + "{0:8.2f}".format(data[3+i])
+                        text = text + "{0:8.2f}".format(data[3 + i])
                     text = text + "{0:>8.5s}".format(str(data[-3]))
                     text = text + " " + "{0:6.4f}".format(data[-2])
                     text = text + "{0:6.2f}".format(data[-1])
                     text = text + "\n"
             print(text)
 
-
-
-    def show_flux_balance(self, results, metabolite, filename = "", format = "csv"):
+    def show_flux_balance(self, results, metabolite, filename="",
+                          format="csv"):
         """
         List of metabolic flux levels of reactions related to given metabolite.
 
@@ -4161,26 +5127,29 @@ class MetabolicModel:
             for text, flux in results:
                 forward = self.reversible[id]['forward']
                 reverse = self.reversible[id]['reverse']
-                string = forward+"+"+reverse
+                string = forward + "+" + reverse
                 sumtemp = 0
                 check = 0
                 for reaction_id in string.split("+"):
                     if not reaction_id in self.reaction_ids:
                         continue
-                    if metabolite in self.reactions[reaction_id]['stoichiometry_metabolite_list']:
+                    if metabolite in self.reactions[reaction_id][
+                            'stoichiometry_metabolite_list']:
                         check = check + 1
                         used_reaction[reaction_id] = 1
-                        coefficient= self.reactions[reaction_id]['stoichiometry_metabolite_list'][metabolite]
+                        coefficient = self.reactions[reaction_id][
+                            'stoichiometry_metabolite_list'][metabolite]
                         #print(metabolite, id, reaction_id, coefficient, text, flux['reaction'][reaction_id]['value'])
-                        sumtemp = sumtemp + coefficient * flux['reaction'][reaction_id]['value']
+                        sumtemp = sumtemp + coefficient * flux['reaction'][
+                            reaction_id]['value']
                 if check > 0:
                     if not id in result_hash:
                         result_hash[id] = []
-                        result_hash_for_screen[id]=[]
+                        result_hash_for_screen[id] = []
                     if sumtemp > 0:
                         result_hash[id].extend([sumtemp, 0])
                     else:
-                        result_hash[id].extend([0, sumtemp*-1])
+                        result_hash[id].extend([0, sumtemp * -1])
                     result_hash_for_screen[id].append(sumtemp)
 
         for id in self.reactions:
@@ -4191,18 +5160,20 @@ class MetabolicModel:
             if self.reactions[id]["type"] == "pseudo":
                 continue
             #used_reaction[reaction_id] = 1
-            if metabolite in self.reactions[id]['stoichiometry_metabolite_list']:
+            if metabolite in self.reactions[id][
+                    'stoichiometry_metabolite_list']:
                 if not id in result_hash:
                     result_hash[id] = []
                     result_hash_for_screen[id] = []
-                coefficient= self.reactions[id]['stoichiometry_metabolite_list'][metabolite]
+                coefficient = self.reactions[id][
+                    'stoichiometry_metabolite_list'][metabolite]
                 for text, flux in results:
                     tempvalue = coefficient * flux['reaction'][id]['value']
                     #print(metabolite, id, coefficient, text, tempvalue)
                     if tempvalue > 0:
                         result_hash[id].extend([tempvalue, 0])
                     else:
-                        result_hash[id].extend([0, tempvalue*-1])
+                        result_hash[id].extend([0, tempvalue * -1])
                     result_hash_for_screen[id].append(tempvalue)
         if filename == "":
 
@@ -4213,9 +5184,9 @@ class MetabolicModel:
             text = text + "\n"
 
             for id, values in result_hash_for_screen.items():
-                text = text+ "{0:10.10s}".format(id)
+                text = text + "{0:10.10s}".format(id)
                 for value in values:
-                    text = text+ "{0:>10.2f}".format(value)
+                    text = text + "{0:>10.2f}".format(value)
                 text = text + "\n"
             print(text)
         else:
@@ -4223,11 +5194,11 @@ class MetabolicModel:
             output = []
             header = ["Reaction"]
             for text, flux in results:
-                header.append(text+"_production")
-                header.append(text+"_consumption")
+                header.append(text + "_production")
+                header.append(text + "_consumption")
             output.append(header)
             for id, value in result_hash.items():
-                output.append([id] +value)
+                output.append([id] + value)
 
             try:
                 with open(filename, 'w', newline='') as f:
@@ -4242,11 +5213,7 @@ class MetabolicModel:
             except:
                 return False
 
-
-
-
-
-    def calc_rss(self, fluxes, mode = "flux"):
+    def calc_rss(self, fluxes, mode="flux"):
         """
         Getter to obtain a residual sum of square (RSS) between estimated MDVs of 'flux' and measured MDVs in 'experiment(s)'
 
@@ -4307,7 +5274,10 @@ class MetabolicModel:
                 if type(flux) == list:
                     flux = flux[0]
 
-                Rm_ind = [flux[group][id]["value"] for (group, id) in self.vector['independent_flux']]
+                Rm_ind = [
+                    flux[group][id]["value"]
+                    for (group, id) in self.vector['independent_flux']
+                ]
             #
             # MDV vector of all experiments
             #
@@ -4316,45 +5286,49 @@ class MetabolicModel:
             mdv_std_original = list(self.vector["stdev"])
             mdv_use = list(self.vector["use"])
             for experiment in sorted(self.experiments.keys()):
-                mdv_exp_original.extend(self.experiments[experiment]['mdv_exp_original'])
-                mdv_std_original.extend(self.experiments[experiment]['mdv_std_original'])
+                mdv_exp_original.extend(
+                    self.experiments[experiment]['mdv_exp_original'])
+                mdv_std_original.extend(
+                    self.experiments[experiment]['mdv_std_original'])
                 mdv_use.extend(self.experiments[experiment]['mdv_use'])
-            mdv_exp = numpy.array([y for x, y in enumerate(mdv_exp_original) if mdv_use[x] != 0])
-            spectrum_std = numpy.array([y for x, y in enumerate(mdv_std_original) if mdv_use[x] != 0])
+            mdv_exp = numpy.array(
+                [y for x, y in enumerate(mdv_exp_original) if mdv_use[x] != 0])
+            spectrum_std = numpy.array(
+                [y for x, y in enumerate(mdv_std_original) if mdv_use[x] != 0])
             #
             # Covariance matrix
             #
-            covinv = numpy.zeros((len(spectrum_std),len(spectrum_std)))
+            covinv = numpy.zeros((len(spectrum_std), len(spectrum_std)))
             for i, std in enumerate(spectrum_std):
                 if std <= 0.0:
                     print("Error in ", i, std)
-                covinv[i,i] = 1.0/(std**2)
+                covinv[i, i] = 1.0 / (std**2)
 
-            rss = optimize.calc_MDV_residue(Rm_ind,
-                stoichiometric_num = self.numbers['independent_start'],
-                reaction_num= self.numbers['total_number'],
+            rss = optimize.calc_MDV_residue(
+                Rm_ind,
+                stoichiometric_num=self.numbers['independent_start'],
+                reaction_num=self.numbers['total_number'],
                 matrixinv=self.matrixinv,
                 experiments=self.experiments,
                 mdv_exp=mdv_exp,
                 mdv_use=mdv_use,
                 covinv=covinv,
-                Rm_initial= self.vector["Rm_initial"],
-                lb = copy.copy(self.vector["lb"]),
-                ub = copy.copy(self.vector["ub"]),
-                reac_met_number = self.numbers['reac_met_number'],
-                calmdv = self.func["calmdv"],
-                diffmdv = self.func["diffmdv"],
-                callbacklevel = self.configuration['callbacklevel']
-                )
+                Rm_initial=self.vector["Rm_initial"],
+                lb=copy.copy(self.vector["lb"]),
+                ub=copy.copy(self.vector["ub"]),
+                reac_met_number=self.numbers['reac_met_number'],
+                calmdv=self.func["calmdv"],
+                diffmdv=self.func["diffmdv"],
+                callbacklevel=self.configuration['callbacklevel'])
             rss_list.append(rss)
             if self.configuration['callbacklevel'] >= 5:
-                print("RSS of given state(s): ",rss_list)
+                print("RSS of given state(s): ", rss_list)
         if type(fluxes) == list:
             return rss_list
         else:
             return rss_list[0]
 
-    def goodness_of_fit(self, flux, alpha = 0.05):
+    def goodness_of_fit(self, flux, alpha=0.05):
         """
         Getter to calculate goodness-of-fit of a given flux distribution
 
@@ -4392,10 +5366,12 @@ class MetabolicModel:
 
         from scipy.stats import chi2, f
 
-        degree_of_freedom = self.get_degree_of_freedom()*1.0
-        number_of_measurement = self.get_number_of_independent_measurements()*1.0
-        RSS = self.calc_rss(flux)*1.0
-        thres = chi2.ppf(1.0-alpha, number_of_measurement - degree_of_freedom)
+        degree_of_freedom = self.get_degree_of_freedom() * 1.0
+        number_of_measurement = self.get_number_of_independent_measurements(
+        ) * 1.0
+        RSS = self.calc_rss(flux) * 1.0
+        thres = chi2.ppf(1.0 - alpha,
+                         number_of_measurement - degree_of_freedom)
         pvalue = chi2.sf(RSS, number_of_measurement - degree_of_freedom)
 
         if self.configuration["callbacklevel"] >= 4:
@@ -4406,11 +5382,11 @@ class MetabolicModel:
             print("pvalue", pvalue)
         if self.configuration["callbacklevel"] >= 1:
             if number_of_measurement <= degree_of_freedom:
-                print("number_of_measurement", number_of_measurement, "is smaller than degree_of_freedom", degree_of_freedom)
+                print("number_of_measurement", number_of_measurement,
+                      "is smaller than degree_of_freedom", degree_of_freedom)
         return pvalue, thres
 
-
-    def get_thres_confidence_interval(self, flux, alpha = 0.05, dist = 'F_dist'):
+    def get_thres_confidence_interval(self, flux, alpha=0.05, dist='F_dist'):
         """
         Getter to obtain a threshold level of RSS for searching confidence interval
 
@@ -4446,9 +5422,8 @@ class MetabolicModel:
         p = self.get_degree_of_freedom()
 
         if dist == 'chai-dist':
-            return RSS + chi2.ppf(1-alpha, 1), n, p
-        return RSS * (1 + f.ppf(1-alpha, 1, n-p)/(n-p)), n, p
-
+            return RSS + chi2.ppf(1 - alpha, 1), n, p
+        return RSS * (1 + f.ppf(1 - alpha, 1, n - p) / (n - p)), n, p
 
     def get_degree_of_freedom(self):
         """
@@ -4464,15 +5439,18 @@ class MetabolicModel:
 
         """
         #modified 056 200517
-        if self.experiments[sorted(self.experiments.keys())[0]]["mode"] == "ST":
+        if self.experiments[sorted(
+                self.experiments.keys())[0]]["mode"] == "ST":
             free_metabolites = 0
             for i in range(len(self.metabolite_ids)):
                 if self.metabolites[self.metabolite_ids[i]]["type"] == "free":
                     free_metabolites = free_metabolites + 1
             p = self.numbers["independent_number"] - free_metabolites
             return p
-        if self.experiments[sorted(self.experiments.keys())[0]]["mode"] == "INST":
+        if self.experiments[sorted(
+                self.experiments.keys())[0]]["mode"] == "INST":
             return self.numbers["independent_number"]
+
     def get_number_of_independent_measurements(self):
         """
         Getter of number of independent measurements of the model
@@ -4490,7 +5468,7 @@ class MetabolicModel:
         29.9.2014 Modified to consider "fitting" flux information.
 
         """
-        n = 0;
+        n = 0
         for experiment in self.experiments:
             n = n + self.experiments[experiment]['number_of_measurement']
         #
@@ -4508,7 +5486,7 @@ class MetabolicModel:
                 fitting_reactions.append(id)
         return n + len(fitting_reactions)
 
-    def generate_ci_templete(self, targets = "normal"):
+    def generate_ci_templete(self, targets="normal"):
         """
         Generator of a blank dictionary to keep confidence interval search results.
         A dictionaty generated by the method is used in self.search_ci
@@ -4534,10 +5512,7 @@ class MetabolicModel:
 
 
         """
-        ci = {
-        'record':{},
-        'data':{}
-        }
+        ci = {'record': {}, 'data': {}}
         #
         # Upper and lower boundaries
         #
@@ -4550,79 +5525,82 @@ class MetabolicModel:
                 data = self.metabolites[id]
             elif state == "reversible":
                 data = self.reversible[id]
-            ci['data'][(state,id)] = {
-            'forward': id,
-            'reverse': '',
-            'upper_boundary': ub[data['position_in_tmp_r']],
-            'lower_boundary': lb[data['position_in_tmp_r']],
-            'flux_data':[],
-            'rss_data':[],
-            'raw_flux_data':[],
-            'upper_boundary_state':"not deternined",
-            'lower_boundary_state':"not deternined",
-            'score':'',
-            'use':'no',
-            'type': data['type'],
+            ci['data'][(state, id)] = {
+                'forward': id,
+                'reverse': '',
+                'upper_boundary': ub[data['position_in_tmp_r']],
+                'lower_boundary': lb[data['position_in_tmp_r']],
+                'flux_data': [],
+                'rss_data': [],
+                'raw_flux_data': [],
+                'upper_boundary_state': "not deternined",
+                'lower_boundary_state': "not deternined",
+                'score': '',
+                'use': 'no',
+                'type': data['type'],
             }
             if state == "reversible":
-                ci['data'][(state,id)]['forward'] = data['forward']
-                ci['data'][(state,id)]['reverse'] = data['reverse']
+                ci['data'][(state, id)]['forward'] = data['forward']
+                ci['data'][(state, id)]['reverse'] = data['reverse']
             elif state == "reaction":
-                ci['data'][(state,id)]['reversible'] = data['reversible']
-
+                ci['data'][(state, id)]['reversible'] = data['reversible']
 
         if targets == 'normal':
             for (state, id) in self.vector['ids']:
                 if state == "reaction":
-                    if ci['data'][(state,id)]['type'] != "fixed":
-                        if ci['data'][(state,id)]['reversible'] == "no":
-                            ci['data'][(state,id)]['use'] = 'on'
+                    if ci['data'][(state, id)]['type'] != "fixed":
+                        if ci['data'][(state, id)]['reversible'] == "no":
+                            ci['data'][(state, id)]['use'] = 'on'
                 if state == "metabolite":
-                    if ci['data'][(state,id)]['type'] != "fixed":
-                        ci['data'][(state,id)]['use'] = 'on'
+                    if ci['data'][(state, id)]['type'] != "fixed":
+                        ci['data'][(state, id)]['use'] = 'on'
                 if state == "reversible":
-                    if ci['data'][(state,id)]['type'] != "fixed":
-                        ci['data'][(state,id)]['use'] = 'on'
+                    if ci['data'][(state, id)]['type'] != "fixed":
+                        ci['data'][(state, id)]['use'] = 'on'
         elif targets == 'without_reversible_reactions':
-                if state == "reaction":
-                    if ci['data'][(state,id)]['type'] != "fixed":
-                        if ci['data'][(state,id)]['reversible'] == "no":
-                            ci['data'][(state,id)]['use'] = 'on'
-                if state == "metabolite":
-                    if ci['data'][(state,id)]['type'] != "fixed":
-                        ci['data'][(state,id)]['use'] = 'on'
+            if state == "reaction":
+                if ci['data'][(state, id)]['type'] != "fixed":
+                    if ci['data'][(state, id)]['reversible'] == "no":
+                        ci['data'][(state, id)]['use'] = 'on'
+            if state == "metabolite":
+                if ci['data'][(state, id)]['type'] != "fixed":
+                    ci['data'][(state, id)]['use'] = 'on'
         elif targets == 'all':
             for (state, id) in self.vector['ids']:
                 if state == "reaction":
-                    if ci['data'][(state,id)]['type'] != "fixed":
-                        ci['data'][(state,id)]['use'] = 'on'
+                    if ci['data'][(state, id)]['type'] != "fixed":
+                        ci['data'][(state, id)]['use'] = 'on'
                 if state == "metabolite":
-                    if ci['data'][(state,id)]['type'] != "fixed":
-                        ci['data'][(state,id)]['use'] = 'on'
+                    if ci['data'][(state, id)]['type'] != "fixed":
+                        ci['data'][(state, id)]['use'] = 'on'
                 if state == "reversible":
-                    if ci['data'][(state,id)]['type'] != "fixed":
-                        ci['data'][(state,id)]['use'] = 'on'
+                    if ci['data'][(state, id)]['type'] != "fixed":
+                        ci['data'][(state, id)]['use'] = 'on'
         elif targets == 'independent':
             for (state, id) in self.vector["independent_flux"]:
                 if state == "reaction":
-                    if ci['data'][(state,id)]['type'] != "fixed":
-                        if ci['data'][(state,id)]['reversible'] == "no":
-                            ci['data'][(state,id)]['use'] = 'on'
+                    if ci['data'][(state, id)]['type'] != "fixed":
+                        if ci['data'][(state, id)]['reversible'] == "no":
+                            ci['data'][(state, id)]['use'] = 'on'
                 if state == "metabolite":
-                    if ci['data'][(state,id)]['type'] != "fixed":
-                        ci['data'][(state,id)]['use'] = 'on'
+                    if ci['data'][(state, id)]['type'] != "fixed":
+                        ci['data'][(state, id)]['use'] = 'on'
                 if state == "reversible":
-                    if ci['data'][(state,id)]['type'] != "fixed":
-                        ci['data'][(state,id)]['use'] = 'on'
+                    if ci['data'][(state, id)]['type'] != "fixed":
+                        ci['data'][(state, id)]['use'] = 'on'
         else:
             for state, id in targets:
-                ci['data'][(state,id)]['use'] = 'on'
+                ci['data'][(state, id)]['use'] = 'on'
 
         return ci
 
-
-
-    def search_ci(self, ci, flux, method = 'grid', alpha = 0.05, dist = 'F_dist', outputthres = 2.0):
+    def search_ci(self,
+                  ci,
+                  flux,
+                  method='grid',
+                  alpha=0.05,
+                  dist='F_dist',
+                  outputthres=2.0):
         """
         Method to estimate confidence intervals using information in a 'ci' dictionary.
 
@@ -4677,7 +5655,7 @@ class MetabolicModel:
         if 'ppservers' in self.configuration:
             ppservers = self.configuration['ppservers']
         else:
-            ppservers = ("",)
+            ppservers = ("", )
         #
         # Check experiment
         #
@@ -4693,16 +5671,14 @@ class MetabolicModel:
         #
         # Calc threadfold
         #
-        thres, number_of_measurements, degree_of_freedom  = self.get_thres_confidence_interval(flux, alpha = alpha, dist = dist)
-
+        thres, number_of_measurements, degree_of_freedom = self.get_thres_confidence_interval(
+            flux, alpha=alpha, dist=dist)
 
         #if (callbacklevel >= 2):
         #    print("Number of active nodes is " + str(job_server.get_active_nodes()))
         ci['record']['flux'] = flux
         ci['record']['thres'] = thres
         ci['record']['rss'] = self.calc_rss(flux)
-
-
 
         #######################################################
         #
@@ -4720,11 +5696,12 @@ class MetabolicModel:
                 print("This function requires Parallel Python!")
                 return False
 
-            starttime=time.perf_counter()
+            starttime = time.perf_counter()
             step = 0.0
-            data_tmp={}
+            data_tmp = {}
             job_number = self.configuration["grid_search_iterations"]
-            initial_search_repeats_in_grid_search = self.configuration["initial_search_repeats_in_grid_search"]
+            initial_search_repeats_in_grid_search = self.configuration[
+                "initial_search_repeats_in_grid_search"]
             #
             # confidence interval
             #
@@ -4734,37 +5711,47 @@ class MetabolicModel:
                 if ci['data'][(group, rid)]['use'] != 'on': continue
                 flux_opt_rid = flux[group][rid]['value']
 
-
-                data={(group, rid):{"flux_data":[flux_opt_rid],"rss_data":[rss_bestfit],"state":["Best fit"],"log":{},"raw_flux_data":[[flux["reaction"][i]["value"] for i in self.reaction_ids]]}}
+                data = {
+                    (group, rid): {
+                        "flux_data": [flux_opt_rid],
+                        "rss_data": [rss_bestfit],
+                        "state": ["Best fit"],
+                        "log": {},
+                        "raw_flux_data": [[
+                            flux["reaction"][i]["value"]
+                            for i in self.reaction_ids
+                        ]]
+                    }
+                }
                 data_tmp.update(data)
 
-                flux_lower =ci['data'][(group, rid)]["lower_boundary"]
-                flux_upper =ci['data'][(group, rid)]["upper_boundary"]
-
-
+                flux_lower = ci['data'][(group, rid)]["lower_boundary"]
+                flux_upper = ci['data'][(group, rid)]["upper_boundary"]
 
                 # Grid number is 20
-                if (flux_upper-flux_lower)>=100:
-                    n=15
+                if (flux_upper - flux_lower) >= 100:
+                    n = 15
                 else:
-                    n=10
+                    n = 10
 
                 if callbacklevel >= 1:
-                    print("Setting:", rid, "flux_opt ",flux_opt_rid, "lb ", flux_lower," ub ",flux_upper, "n=", n)
+                    print("Setting:", rid, "flux_opt ", flux_opt_rid, "lb ",
+                          flux_lower, " ub ", flux_upper, "n=", n)
                 #
                 # Store original metabolic constrains
                 #
-                temp_type, temp_value, temp_stdev = self.get_constrain(group, rid)
+                temp_type, temp_value, temp_stdev = self.get_constrain(
+                    group, rid)
                 #
                 # Set initial search to upward
                 #
                 temp_array_initial_fluxes = []
                 counter_of_missed_initial_state = 0
                 #
-                for i in range(int(n+1)):
-                    if  counter_of_missed_initial_state > 5:
+                for i in range(int(n + 1)):
+                    if counter_of_missed_initial_state > 5:
                         break
-                    step = (flux_upper-flux_opt_rid) * (0.5**(n-i))
+                    step = (flux_upper - flux_opt_rid) * (0.5**(n - i))
                     fixed_flux = flux_opt_rid + step
                     if fixed_flux >= flux_upper:
                         fixed_flux = flux_upper
@@ -4773,27 +5760,47 @@ class MetabolicModel:
                     #
                     # Fix reaction
                     #
-                    self.set_constrain(group, rid, "fixed", value = fixed_flux, stdev = 1.0)
+                    self.set_constrain(group,
+                                       rid,
+                                       "fixed",
+                                       value=fixed_flux,
+                                       stdev=1.0)
                     self.update()
                     if callbacklevel >= 3:
-                        print("Fixed for initial search:", rid, "flux_opt ",flux_opt_rid, "value", fixed_flux,flux_lower,flux_upper, "interation", i)
+                        print("Fixed for initial search:", rid, "flux_opt ",
+                              flux_opt_rid, "value", fixed_flux, flux_lower,
+                              flux_upper, "interation", i)
 
                     initial_state_flag = 0
 
                     for job_n in range(job_number):
-                        state, flux_opt = self.generate_initial_states(initial_search_repeats_in_grid_search, 1, template = flux, method = "parallelpp")
+                        state, flux_opt = self.generate_initial_states(
+                            initial_search_repeats_in_grid_search,
+                            1,
+                            template=flux,
+                            method="parallelpp")
                         if len(flux_opt) == 0:
                             if callbacklevel >= 3:
-                                print("Can't find initial state using template:", rid, "flux_opt ",flux_opt_rid, "value", fixed_flux, "interation", i, "job", job_n)
-                            state, flux_opt = self.generate_initial_states(initial_search_repeats_in_grid_search, 1, method = "parallelpp")
+                                print(
+                                    "Can't find initial state using template:",
+                                    rid, "flux_opt ", flux_opt_rid, "value",
+                                    fixed_flux, "interation", i, "job", job_n)
+                            state, flux_opt = self.generate_initial_states(
+                                initial_search_repeats_in_grid_search,
+                                1,
+                                method="parallelpp")
                         #
                         # When initial flux could not be found
                         #
                         if len(flux_opt) == 0:
                             if callbacklevel >= 2:
-                                print("Can't find initial state:", rid, "flux_opt ",flux_opt_rid, "value", fixed_flux, "interation", i, "job", job_n)
+                                print("Can't find initial state:", rid,
+                                      "flux_opt ", flux_opt_rid, "value",
+                                      fixed_flux, "interation", i, "job",
+                                      job_n)
                             continue
-                        temp_array_initial_fluxes.append((group, rid, fixed_flux, flux_opt))
+                        temp_array_initial_fluxes.append(
+                            (group, rid, fixed_flux, flux_opt))
                         initial_state_flag = initial_state_flag + 1
                     #
                     # if initial state was found
@@ -4808,16 +5815,17 @@ class MetabolicModel:
                         data_tmp[(group, rid)]["flux_data"].append(fixed_flux)
                         data_tmp[(group, rid)]["rss_data"].append(thres * 10.0)
                         data_tmp[(group, rid)]["raw_flux_data"].append([])
-                        data_tmp[(group, rid)]["state"].append("Failed to find initial state") #
+                        data_tmp[(group, rid)]["state"].append(
+                            "Failed to find initial state")  #
                 #
                 # Set initial search to upward
                 #
                 counter_of_missed_initial_state = 0
                 #
-                for i in range(int(n+1)):
-                    if  counter_of_missed_initial_state > 5:
+                for i in range(int(n + 1)):
+                    if counter_of_missed_initial_state > 5:
                         break
-                    step = (flux_opt_rid - flux_lower) * (0.5**(n-i))
+                    step = (flux_opt_rid - flux_lower) * (0.5**(n - i))
                     fixed_flux = flux_opt_rid - step
                     if fixed_flux >= flux_upper:
                         fixed_flux = flux_upper
@@ -4826,27 +5834,47 @@ class MetabolicModel:
                     #
                     # Fix reaction
                     #
-                    self.set_constrain(group, rid, "fixed", value = fixed_flux, stdev = 1.0)
+                    self.set_constrain(group,
+                                       rid,
+                                       "fixed",
+                                       value=fixed_flux,
+                                       stdev=1.0)
                     self.update()
                     if callbacklevel >= 3:
-                        print("Fixed for initial search:", rid, "flux_opt ",flux_opt_rid, "value", fixed_flux,flux_lower,flux_upper, "interation", i)
+                        print("Fixed for initial search:", rid, "flux_opt ",
+                              flux_opt_rid, "value", fixed_flux, flux_lower,
+                              flux_upper, "interation", i)
 
                     initial_state_flag = 0
 
                     for job_n in range(job_number):
-                        state, flux_opt = self.generate_initial_states(initial_search_repeats_in_grid_search, 1, template = flux, method = "parallelpp")
+                        state, flux_opt = self.generate_initial_states(
+                            initial_search_repeats_in_grid_search,
+                            1,
+                            template=flux,
+                            method="parallelpp")
                         if len(flux_opt) == 0:
                             if callbacklevel >= 3:
-                                print("Can't find initial state using template:", rid, "flux_opt ",flux_opt_rid, "value", fixed_flux, "interation", i, "job", job_n)
-                            state, flux_opt = self.generate_initial_states(initial_search_repeats_in_grid_search, 1, method = "parallelpp")
+                                print(
+                                    "Can't find initial state using template:",
+                                    rid, "flux_opt ", flux_opt_rid, "value",
+                                    fixed_flux, "interation", i, "job", job_n)
+                            state, flux_opt = self.generate_initial_states(
+                                initial_search_repeats_in_grid_search,
+                                1,
+                                method="parallelpp")
                         #
                         # When initial flux could not be found
                         #
                         if len(flux_opt) == 0:
                             if callbacklevel >= 2:
-                                print("Can't find initial state:", rid, "flux_opt ",flux_opt_rid, "value", fixed_flux, "interation", i, "job", job_n)
+                                print("Can't find initial state:", rid,
+                                      "flux_opt ", flux_opt_rid, "value",
+                                      fixed_flux, "interation", i, "job",
+                                      job_n)
                             continue
-                        temp_array_initial_fluxes.append((group, rid, fixed_flux, flux_opt))
+                        temp_array_initial_fluxes.append(
+                            (group, rid, fixed_flux, flux_opt))
                         initial_state_flag = initial_state_flag + 1
                     #
                     # if initial state was found
@@ -4861,35 +5889,58 @@ class MetabolicModel:
                         data_tmp[(group, rid)]["flux_data"].append(fixed_flux)
                         data_tmp[(group, rid)]["rss_data"].append(thres * 10.0)
                         data_tmp[(group, rid)]["raw_flux_data"].append([])
-                        data_tmp[(group, rid)]["state"].append("Failed to find initial state") #
+                        data_tmp[(group, rid)]["state"].append(
+                            "Failed to find initial state")  #
                 #
                 # Pitch jobs to pp
                 #
-                jobs=[]
-                job_server = pp.Server(ncpus = ncpus, ppservers=ppservers, restart=True, socket_timeout=7200)
-                for (group_temp, rid_temp, fixed_flux, flux_opt) in reversed(temp_array_initial_fluxes):
-                    self.set_constrain(group, rid, "fixed", value = fixed_flux, stdev = 1.0)
+                jobs = []
+                job_server = pp.Server(ncpus=ncpus,
+                                       ppservers=ppservers,
+                                       restart=True,
+                                       socket_timeout=7200)
+                for (group_temp, rid_temp, fixed_flux,
+                     flux_opt) in reversed(temp_array_initial_fluxes):
+                    self.set_constrain(group,
+                                       rid,
+                                       "fixed",
+                                       value=fixed_flux,
+                                       stdev=1.0)
                     self.update()
                     try:
                         rss = self.calc_rss(flux_opt)
                     except:
                         if callbacklevel >= 3:
-                            print("Skipped:", rid, "flux_opt ",flux_opt_rid, "value", fixed_flux)
+                            print("Skipped:", rid, "flux_opt ", flux_opt_rid,
+                                  "value", fixed_flux)
                         continue
 
                     if callbacklevel >= 3:
-                        print("Fixed for fitting:", rid, "flux_opt ",flux_opt_rid, "value", fixed_flux)
+                        print("Fixed for fitting:", rid, "flux_opt ",
+                              flux_opt_rid, "value", fixed_flux)
 
-                    parameters = self.fitting_flux(method = 'deep', flux = flux_opt, output = 'for_parallel')
-                    functions = (optimize.calc_MDV_residue_scipy, optimize.fit_r_mdv_scipy,optimize.calc_MDV_residue_nlopt, optimize.fit_r_mdv_nlopt)
-                    jobs.append([(group, rid),fixed_flux, flux_opt, job_server.submit(optimize.fit_r_mdv_deep, parameters, functions,("numpy","nlopt","scipy","scipy.integrate"))])
+                    parameters = self.fitting_flux(method='deep',
+                                                   flux=flux_opt,
+                                                   output='for_parallel')
+                    functions = (optimize.calc_MDV_residue_scipy,
+                                 optimize.fit_r_mdv_scipy,
+                                 optimize.calc_MDV_residue_nlopt,
+                                 optimize.fit_r_mdv_nlopt)
+                    jobs.append([
+                        (group, rid), fixed_flux, flux_opt,
+                        job_server.submit(
+                            optimize.fit_r_mdv_deep, parameters, functions,
+                            ("numpy", "nlopt", "scipy", "scipy.integrate"))
+                    ])
                     if callbacklevel >= 2:
-                        print("New job was added to pp:", rid, "flux_opt ",flux_opt_rid, "value", fixed_flux)
+                        print("New job was added to pp:", rid, "flux_opt ",
+                              flux_opt_rid, "value", fixed_flux)
 
                 #
                 # Return to original position
                 #
-                self.set_constrain(group, rid, temp_type, temp_value, temp_stdev)
+                self.set_constrain(group, rid, temp_type, temp_value,
+                                   temp_stdev)
                 self.update()
                 if callbacklevel >= 2:
                     print("Waiting for pp response", rid, "flux_opt ")
@@ -4904,19 +5955,19 @@ class MetabolicModel:
                         #
                         # Large value is used when falied
                         #
-                        rss = 1000000000000 #★200317追加　落ちてないのかfialしたのか判断できないので固定値にした
+                        rss = 1000000000000  #★200317追加　落ちてないのかfialしたのか判断できないので固定値にした
                         #rss = thres * 10.0 + abs(flux_value-flux_opt) * 0.00001
                         #opt_flux = []
                         state = "Failed in optimization"
                     else:
                         state, rss, opt_flux, Rm_ind_sol = results
-                        state =  "Finished successfully "
+                        state = "Finished successfully "
                     #
                     #  Large value is used when falied
                     #
                     if len(opt_flux) == 0:
                         #continue
-                        rss = 1000000000000 #★200317追加　落ちてないのかfialしたのか判断できないので固定値にした
+                        rss = 1000000000000  #★200317追加　落ちてないのかfialしたのか判断できないので固定値にした
                         #rss = thres * 10.0 + abs(flux_value-flux_opt) * 0.00001
                         opt_flux = []
                         state = "Failed in optimization"
@@ -4926,12 +5977,15 @@ class MetabolicModel:
                     data_tmp[(group, rid)]["flux_data"].append(flux_value)
                     data_tmp[(group, rid)]["rss_data"].append(rss)
                     data_tmp[(group, rid)]["raw_flux_data"].append(opt_flux)
-                    data_tmp[(group, rid)]["state"].append(state) #★200517追加　落ちてないのかfialしたのか判断できないので固定値にした
+                    data_tmp[(group, rid)]["state"].append(
+                        state)  #★200517追加　落ちてないのかfialしたのか判断できないので固定値にした
 
                     if callbacklevel >= 3:
-                        print("Finished:", group, rid, "flux_opt ",flux_opt_rid, "lb ", flux_lower,", ub ",flux_upper, "flux_fixed", flux_value, "rss", rss, "state", state)
+                        print("Finished:", group, rid, "flux_opt ",
+                              flux_opt_rid, "lb ", flux_lower, ", ub ",
+                              flux_upper, "flux_fixed", flux_value, "rss", rss,
+                              "state", state)
                 job_server.destroy()
-
 
             #
             # Cals again around thres
@@ -4947,17 +6001,22 @@ class MetabolicModel:
                 rss_values_array_tmp = data_tmp[(group, rid)]['rss_data']
                 raw_flux_array_tmp = data_tmp[(group, rid)]['raw_flux_data']
 
-                data_sorted = sorted([(x, rss_values_array_tmp[i]) for i, x in enumerate(flux_values_array_tmp)], key = lambda s: s[0])
+                data_sorted = sorted(
+                    [(x, rss_values_array_tmp[i])
+                     for i, x in enumerate(flux_values_array_tmp)],
+                    key=lambda s: s[0])
                 #
                 # Add right and left end points
                 #
-                interval = flux_upper - flux_lower # Added at 200517 to exactly detect edges
-                data_sorted.append((flux_upper + interval * 0.0001, thres * 11.0))
-                data_sorted.insert(0, (flux_lower - (interval * 0.0001), thres * 11.0))
+                interval = flux_upper - flux_lower  # Added at 200517 to exactly detect edges
+                data_sorted.append(
+                    (flux_upper + interval * 0.0001, thres * 11.0))
+                data_sorted.insert(0, (flux_lower -
+                                       (interval * 0.0001), thres * 11.0))
                 #
                 # points under the threshold
                 #
-                below_threshold  = [x for x in data_sorted if x[1] < thres]
+                below_threshold = [x for x in data_sorted if x[1] < thres]
                 # Detect just before the lower boundary
                 flux_previous_left = below_threshold[0][0]
                 # Detect just before the upper boundary
@@ -4965,38 +6024,48 @@ class MetabolicModel:
 
                 # Detect just next to the boundary
                 #print(data_sorted, flux_previous_left, flux_previous_right)
-                flux_next_left  = max([x[0] for x in data_sorted if x[0] < flux_previous_left])
-                flux_next_right  = min([x[0] for x in data_sorted if x[0] > flux_previous_right])
+                flux_next_left = max(
+                    [x[0] for x in data_sorted if x[0] < flux_previous_left])
+                flux_next_right = min(
+                    [x[0] for x in data_sorted if x[0] > flux_previous_right])
                 #print("flux_next_left ",flux_next_left,", flux_next_right ",flux_next_right)
-                data_tmp[(group, rid)]["log"]["1st previous_left"] = flux_previous_left
-                data_tmp[(group, rid)]["log"]["1st previous_right"] = flux_previous_right
+                data_tmp[(
+                    group,
+                    rid)]["log"]["1st previous_left"] = flux_previous_left
+                data_tmp[(
+                    group,
+                    rid)]["log"]["1st previous_right"] = flux_previous_right
                 data_tmp[(group, rid)]["log"]["1st next_left"] = flux_next_left
-                data_tmp[(group, rid)]["log"]["1st next_right"] = flux_next_right
+                data_tmp[(group,
+                          rid)]["log"]["1st next_right"] = flux_next_right
 
                 if callbacklevel >= 2:
-                    print("flux_previous_left ",flux_previous_left,", flux_previous_right ",flux_previous_right)
-                    print("flux_next_left ",flux_next_left,", flux_next_right ",flux_next_right)
+                    print("flux_previous_left ", flux_previous_left,
+                          ", flux_previous_right ", flux_previous_right)
+                    print("flux_next_left ", flux_next_left,
+                          ", flux_next_right ", flux_next_right)
                 #
                 # This part should be reconsiderd 200517
                 #
-                if (flux_next_right-flux_next_left)>=40:
-                    n=20
-                elif (flux_next_right-flux_next_left)>=5:
-                    n=10
+                if (flux_next_right - flux_next_left) >= 40:
+                    n = 20
+                elif (flux_next_right - flux_next_left) >= 5:
+                    n = 10
                 else:
-                    n=5
+                    n = 5
                 #
                 # Store original metabolic constrains
                 #
-                temp_type, temp_value, temp_stdev = self.get_constrain(group, rid)
+                temp_type, temp_value, temp_stdev = self.get_constrain(
+                    group, rid)
                 #
                 temp_array_initial_fluxes = []
-                for e in range (1,n):
+                for e in range(1, n):
                     #
                     #
                     # right direcition
-                    step = abs(flux_previous_right - flux_next_right)/n
-                    fixed_flux = flux_previous_right +step*e
+                    step = abs(flux_previous_right - flux_next_right) / n
+                    fixed_flux = flux_previous_right + step * e
                     if fixed_flux > flux_upper:
                         fixed_flux = flux_upper
                     if fixed_flux < flux_lower:
@@ -5005,27 +6074,47 @@ class MetabolicModel:
                     #
                     # Fix reaction
                     #
-                    self.set_constrain(group, rid, "fixed", value = fixed_flux, stdev = 1.0)
+                    self.set_constrain(group,
+                                       rid,
+                                       "fixed",
+                                       value=fixed_flux,
+                                       stdev=1.0)
                     self.update()
                     if callbacklevel >= 3:
-                        print("Fixed for initial search:", rid, "flux_opt ",flux_opt_rid, "value", fixed_flux, "interation", e)
+                        print("Fixed for initial search:", rid, "flux_opt ",
+                              flux_opt_rid, "value", fixed_flux, "interation",
+                              e)
 
                     initial_state_flag = 0
 
                     for job_n in range(job_number):
-                        state, flux_opt = self.generate_initial_states(initial_search_repeats_in_grid_search, 1, template = flux, method = "parallelpp")
+                        state, flux_opt = self.generate_initial_states(
+                            initial_search_repeats_in_grid_search,
+                            1,
+                            template=flux,
+                            method="parallelpp")
                         if len(flux_opt) == 0:
                             if callbacklevel >= 3:
-                                print("Can't find initial state using template:", rid, "flux_opt ",flux_opt_rid, "value", fixed_flux, "interation", e, "job", job_n)
-                            state, flux_opt = self.generate_initial_states(initial_search_repeats_in_grid_search, 1, method = "parallelpp")
+                                print(
+                                    "Can't find initial state using template:",
+                                    rid, "flux_opt ", flux_opt_rid, "value",
+                                    fixed_flux, "interation", e, "job", job_n)
+                            state, flux_opt = self.generate_initial_states(
+                                initial_search_repeats_in_grid_search,
+                                1,
+                                method="parallelpp")
                         #
                         # When initial flux could not be found
                         #
                         if len(flux_opt) == 0:
                             if callbacklevel >= 2:
-                                print("Can't find initial state:", rid, "flux_opt ",flux_opt_rid, "value", fixed_flux, "interation", e, "job", job_n)
+                                print("Can't find initial state:", rid,
+                                      "flux_opt ", flux_opt_rid, "value",
+                                      fixed_flux, "interation", e, "job",
+                                      job_n)
                             continue
-                        temp_array_initial_fluxes.append((group, rid, fixed_flux, flux_opt))
+                        temp_array_initial_fluxes.append(
+                            (group, rid, fixed_flux, flux_opt))
                         initial_state_flag = initial_state_flag + 1
                     #
                     # if initial state was found
@@ -5037,12 +6126,13 @@ class MetabolicModel:
                         data_tmp[(group, rid)]["flux_data"].append(fixed_flux)
                         data_tmp[(group, rid)]["rss_data"].append(thres * 10.0)
                         data_tmp[(group, rid)]["raw_flux_data"].append([])
-                        data_tmp[(group, rid)]["state"].append("Failed to find initial state") #
+                        data_tmp[(group, rid)]["state"].append(
+                            "Failed to find initial state")  #
                     #
                     # left reaction
                     #
-                    step = abs(flux_previous_left - flux_next_left)/n
-                    fixed_flux = flux_previous_left - step*e
+                    step = abs(flux_previous_left - flux_next_left) / n
+                    fixed_flux = flux_previous_left - step * e
                     if fixed_flux > flux_upper:
                         fixed_flux = flux_upper
                     if fixed_flux < flux_lower:
@@ -5050,27 +6140,47 @@ class MetabolicModel:
                     #
                     # Fix reaction
                     #
-                    self.set_constrain(group, rid, "fixed", value = fixed_flux, stdev = 1.0)
+                    self.set_constrain(group,
+                                       rid,
+                                       "fixed",
+                                       value=fixed_flux,
+                                       stdev=1.0)
                     self.update()
                     if callbacklevel >= 3:
-                        print("Fixed for initial search:", rid, "flux_opt ",flux_opt_rid, "value", fixed_flux, "interation", e)
+                        print("Fixed for initial search:", rid, "flux_opt ",
+                              flux_opt_rid, "value", fixed_flux, "interation",
+                              e)
 
                     initial_state_flag = 0
 
                     for job_n in range(job_number):
-                        state, flux_opt = self.generate_initial_states(initial_search_repeats_in_grid_search, 1, template = flux, method = "parallelpp")
+                        state, flux_opt = self.generate_initial_states(
+                            initial_search_repeats_in_grid_search,
+                            1,
+                            template=flux,
+                            method="parallelpp")
                         if len(flux_opt) == 0:
                             if callbacklevel >= 3:
-                                print("Can't find initial state using template:", rid, "flux_opt ",flux_opt_rid, "value", fixed_flux, "interation", e, "job", job_n)
-                            state, flux_opt = self.generate_initial_states(initial_search_repeats_in_grid_search, 1, method = "parallelpp")
+                                print(
+                                    "Can't find initial state using template:",
+                                    rid, "flux_opt ", flux_opt_rid, "value",
+                                    fixed_flux, "interation", e, "job", job_n)
+                            state, flux_opt = self.generate_initial_states(
+                                initial_search_repeats_in_grid_search,
+                                1,
+                                method="parallelpp")
                         #
                         # When initial flux could not be found
                         #
                         if len(flux_opt) == 0:
                             if callbacklevel >= 2:
-                                print("Can't find initial state:", rid, "flux_opt ",flux_opt_rid, "value", fixed_flux, "interation", e, "job", job_n)
+                                print("Can't find initial state:", rid,
+                                      "flux_opt ", flux_opt_rid, "value",
+                                      fixed_flux, "interation", e, "job",
+                                      job_n)
                             continue
-                        temp_array_initial_fluxes.append((group, rid, fixed_flux, flux_opt))
+                        temp_array_initial_fluxes.append(
+                            (group, rid, fixed_flux, flux_opt))
                         initial_state_flag = initial_state_flag + 1
                     #
                     # if initial state was found
@@ -5082,30 +6192,51 @@ class MetabolicModel:
                         data_tmp[(group, rid)]["flux_data"].append(fixed_flux)
                         data_tmp[(group, rid)]["rss_data"].append(thres * 10.0)
                         data_tmp[(group, rid)]["raw_flux_data"].append([])
-                        data_tmp[(group, rid)]["state"].append("Failed to find initial state") #
+                        data_tmp[(group, rid)]["state"].append(
+                            "Failed to find initial state")  #
                 #
                 # Pitch jobs to pp
                 #
-                jobs=[]
-                job_server = pp.Server(ncpus = ncpus, ppservers=ppservers, restart=True, socket_timeout=7200)
-                for (group_temp, rid_temp, fixed_flux, flux_opt) in temp_array_initial_fluxes:
-                    self.set_constrain(group, rid, "fixed", value = fixed_flux, stdev = 1.0)
+                jobs = []
+                job_server = pp.Server(ncpus=ncpus,
+                                       ppservers=ppservers,
+                                       restart=True,
+                                       socket_timeout=7200)
+                for (group_temp, rid_temp, fixed_flux,
+                     flux_opt) in temp_array_initial_fluxes:
+                    self.set_constrain(group,
+                                       rid,
+                                       "fixed",
+                                       value=fixed_flux,
+                                       stdev=1.0)
                     self.update()
 
                     if callbacklevel >= 3:
-                        print("Fixed for fitting:", rid, "flux_opt ",flux_opt_rid, "value", fixed_flux)
+                        print("Fixed for fitting:", rid, "flux_opt ",
+                              flux_opt_rid, "value", fixed_flux)
 
-                    parameters = self.fitting_flux(method = 'deep', flux = flux_opt, output = 'for_parallel')
-                    functions = (optimize.calc_MDV_residue_scipy, optimize.fit_r_mdv_scipy,optimize.calc_MDV_residue_nlopt, optimize.fit_r_mdv_nlopt)
-                    jobs.append([(group, rid),fixed_flux, flux_opt, job_server.submit(optimize.fit_r_mdv_deep, parameters, functions,("numpy","nlopt","scipy","scipy.integrate"))])
+                    parameters = self.fitting_flux(method='deep',
+                                                   flux=flux_opt,
+                                                   output='for_parallel')
+                    functions = (optimize.calc_MDV_residue_scipy,
+                                 optimize.fit_r_mdv_scipy,
+                                 optimize.calc_MDV_residue_nlopt,
+                                 optimize.fit_r_mdv_nlopt)
+                    jobs.append([
+                        (group, rid), fixed_flux, flux_opt,
+                        job_server.submit(
+                            optimize.fit_r_mdv_deep, parameters, functions,
+                            ("numpy", "nlopt", "scipy", "scipy.integrate"))
+                    ])
                     if callbacklevel >= 2:
-                        print("New job was added to pp:", rid, "flux_opt ",flux_opt_rid, "value", fixed_flux)
+                        print("New job was added to pp:", rid, "flux_opt ",
+                              flux_opt_rid, "value", fixed_flux)
                 #
                 # Return to original position [need modificaton]
                 #
-                self.set_constrain(group, rid, temp_type, temp_value, temp_stdev)
+                self.set_constrain(group, rid, temp_type, temp_value,
+                                   temp_stdev)
                 self.update()
-
 
                 #
                 # Retrieve results
@@ -5118,19 +6249,19 @@ class MetabolicModel:
                         #
                         # Large value is used when falied
                         #
-                        rss = 1000000000000 #★200317追加　落ちてないのかfialしたのか判断できないので固定値にした
+                        rss = 1000000000000  #★200317追加　落ちてないのかfialしたのか判断できないので固定値にした
                         #rss = thres * 10.0 + abs(flux_value-flux_opt) * 0.00001
                         #opt_flux = []
                         state = "Failed in optimization"
                     else:
                         state, rss, opt_flux, Rm_ind_sol = results
-                        state =  "Finished successfully "
+                        state = "Finished successfully "
                     #
                     #  Large value is used when falied
                     #
                     if len(opt_flux) == 0:
                         #continue
-                        rss = 1000000000000 #★200317追加　落ちてないのかfialしたのか判断できないので固定値にした
+                        rss = 1000000000000  #★200317追加　落ちてないのかfialしたのか判断できないので固定値にした
                         #rss = thres * 10.0 + abs(flux_value-flux_opt) * 0.00001
                         opt_flux = []
                         state = "Failed in optimization"
@@ -5140,10 +6271,14 @@ class MetabolicModel:
                     data_tmp[(group, rid)]["flux_data"].append(flux_value)
                     data_tmp[(group, rid)]["rss_data"].append(rss)
                     data_tmp[(group, rid)]["raw_flux_data"].append(opt_flux)
-                    data_tmp[(group, rid)]["state"].append(state) #★200517追加　落ちてないのかfialしたのか判断できないので固定値にした
+                    data_tmp[(group, rid)]["state"].append(
+                        state)  #★200517追加　落ちてないのかfialしたのか判断できないので固定値にした
 
                     if callbacklevel >= 3:
-                        print("Finished:", group, rid, "flux_opt ",flux_opt_rid, "lb ", flux_lower,", ub ",flux_upper, "flux_fixed", flux_value, "rss", rss, "state", state)
+                        print("Finished:", group, rid, "flux_opt ",
+                              flux_opt_rid, "lb ", flux_lower, ", ub ",
+                              flux_upper, "flux_fixed", flux_value, "rss", rss,
+                              "state", state)
                 job_server.destroy()
 
             if callbacklevel >= 1:
@@ -5164,15 +6299,20 @@ class MetabolicModel:
                 raw_flux_array_tmp = data_tmp[(group, rid)]['raw_flux_data']
                 state_array_tmp = data_tmp[(group, rid)]['state']
 
-                data_sorted = sorted([(x, rss_values_array_tmp[i]) for i, x in enumerate(flux_values_array_tmp)], key = lambda s: s[0])
+                data_sorted = sorted(
+                    [(x, rss_values_array_tmp[i])
+                     for i, x in enumerate(flux_values_array_tmp)],
+                    key=lambda s: s[0])
 
-                interval = flux_upper - flux_lower # Added at 200517 to exactly detect edges
-                data_sorted.append((flux_upper + interval * 0.0001, thres * 10.0))
-                data_sorted.insert(0, (flux_lower - (interval * 0.0001), thres * 10.0))
+                interval = flux_upper - flux_lower  # Added at 200517 to exactly detect edges
+                data_sorted.append(
+                    (flux_upper + interval * 0.0001, thres * 10.0))
+                data_sorted.insert(0, (flux_lower -
+                                       (interval * 0.0001), thres * 10.0))
 
                 #data_sorted.append((flux_upper, thres * 10.0))
                 #data_sorted.insert(0, (flux_lower, thres * 10.0))
-                below_threshold  = [x for x in data_sorted if x[1] < thres]
+                below_threshold = [x for x in data_sorted if x[1] < thres]
                 # Detect just before the lower boundary
                 flux_previous_left = below_threshold[0][0]
                 rss_previous_left = below_threshold[0][1]
@@ -5180,9 +6320,12 @@ class MetabolicModel:
                 flux_previous_right = below_threshold[-1][0]
                 rss_previous_right = below_threshold[-1][1]
                 # Detect just sfter the lower boundary
-                left_group  = sorted([x for x in data_sorted if x[0] < flux_previous_left], key = lambda s: s[1])
-                right_group  = sorted([x for x in data_sorted if x[0] > flux_previous_right], key = lambda s: s[1])
-
+                left_group = sorted(
+                    [x for x in data_sorted if x[0] < flux_previous_left],
+                    key=lambda s: s[1])
+                right_group = sorted(
+                    [x for x in data_sorted if x[0] > flux_previous_right],
+                    key=lambda s: s[1])
 
                 #rss_next_left = left_group[-1][1]
                 #flux_next_left = left_group[-1][0]
@@ -5191,8 +6334,10 @@ class MetabolicModel:
                 rss_next_right = right_group[0][1]
                 flux_next_right = right_group[0][0]
 
-
-                flux_lower = flux_previous_left - (flux_previous_left - flux_next_left) * (thres - rss_previous_left)/(rss_next_left - rss_previous_left)
+                flux_lower = flux_previous_left - (
+                    flux_previous_left - flux_next_left) * (
+                        thres - rss_previous_left) / (rss_next_left -
+                                                      rss_previous_left)
                 state_lower = "Determined"
                 #
                 # Check
@@ -5202,27 +6347,38 @@ class MetabolicModel:
                 if flux_lower < ci['data'][(group, rid)]['lower_boundary']:
                     flux_lower = ci['data'][(group, rid)]['lower_boundary']
 
-                flux_upper = flux_previous_right + (flux_next_right - flux_previous_right) * (thres - rss_previous_right)/(rss_next_right - rss_previous_right)
+                flux_upper = flux_previous_right + (
+                    flux_next_right - flux_previous_right) * (
+                        thres - rss_previous_right) / (rss_next_right -
+                                                       rss_previous_right)
                 state_upper = "Determined"
-                if flux_next_right > ci['data'][(group, rid)]['upper_boundary']:
+                if flux_next_right > ci['data'][(group,
+                                                 rid)]['upper_boundary']:
                     state_upper = "Not determined. Rearched to upper boundary"
                 if flux_upper > ci['data'][(group, rid)]['upper_boundary']:
                     flux_upper = ci['data'][(group, rid)]['upper_boundary']
 
                 if callbacklevel >= 3:
-                    print(flux_lower, flux_previous_left, rss_previous_left,flux_next_left,rss_next_left)
-                    print(flux_upper, flux_previous_right, rss_previous_right,flux_next_right,rss_next_right)
+                    print(flux_lower, flux_previous_left, rss_previous_left,
+                          flux_next_left, rss_next_left)
+                    print(flux_upper, flux_previous_right, rss_previous_right,
+                          flux_next_right, rss_next_right)
                 #
                 # Detect lower bounary of confidence interval
                 #
-                data_tmp[(group, rid)]["log"]["2nd previous_left"] = flux_previous_left
-                data_tmp[(group, rid)]["log"]["2nd previous_right"] = flux_previous_right
+                data_tmp[(
+                    group,
+                    rid)]["log"]["2nd previous_left"] = flux_previous_left
+                data_tmp[(
+                    group,
+                    rid)]["log"]["2nd previous_right"] = flux_previous_right
                 data_tmp[(group, rid)]["log"]["2nd next_left"] = flux_next_left
-                data_tmp[(group, rid)]["log"]["2nd next_right"] = flux_next_right
-
+                data_tmp[(group,
+                          rid)]["log"]["2nd next_right"] = flux_next_right
 
                 if callbacklevel >= 1:
-                    print(rid, 'Grid search maeda method. Lower boundary:', flux_lower, 'Upper boundery' ,flux_upper)
+                    print(rid, 'Grid search maeda method. Lower boundary:',
+                          flux_lower, 'Upper boundery', flux_upper)
 
                 ci['data'][(group, rid)]['upper_boundary'] = flux_upper
                 ci['data'][(group, rid)]['lower_boundary'] = flux_lower
@@ -5235,11 +6391,27 @@ class MetabolicModel:
                 #
                 # Grids with too large rss are removed
                 #
-                folds = outputthres #
-                flux_values_array = [flux_values_array_tmp[i] for (i, rsst) in enumerate(rss_values_array_tmp) if rsst < (thres * folds) ]
-                raw_flux_array = [raw_flux_array_tmp[i] for (i, rsst) in enumerate(rss_values_array_tmp) if rsst < thres * folds ]
-                rss_values_array = [rss_values_array_tmp[i] for (i, rsst)  in enumerate(rss_values_array_tmp) if rsst < thres * folds ]
-                state_array = [state_array_tmp[i] for (i, rsst)  in enumerate(rss_values_array_tmp) if rsst < thres * folds ]
+                folds = outputthres  #
+                flux_values_array = [
+                    flux_values_array_tmp[i]
+                    for (i, rsst) in enumerate(rss_values_array_tmp)
+                    if rsst < (thres * folds)
+                ]
+                raw_flux_array = [
+                    raw_flux_array_tmp[i]
+                    for (i, rsst) in enumerate(rss_values_array_tmp)
+                    if rsst < thres * folds
+                ]
+                rss_values_array = [
+                    rss_values_array_tmp[i]
+                    for (i, rsst) in enumerate(rss_values_array_tmp)
+                    if rsst < thres * folds
+                ]
+                state_array = [
+                    state_array_tmp[i]
+                    for (i, rsst) in enumerate(rss_values_array_tmp)
+                    if rsst < thres * folds
+                ]
 
                 ci['data'][(group, rid)]['flux_data'] = flux_values_array
                 ci['data'][(group, rid)]['rss_data'] = rss_values_array
@@ -5261,11 +6433,8 @@ class MetabolicModel:
             # Show calc time
             #
             if callbacklevel >= 1:
-                endtime=time.perf_counter()
-                print("time elapsed ", endtime-starttime,"s")
-
-
-
+                endtime = time.perf_counter()
+                print("time elapsed ", endtime - starttime, "s")
 
         #######################################################
         #
@@ -5284,11 +6453,12 @@ class MetabolicModel:
                     print("This function requires joblib!")
                 return False
 
-            starttime=time.perf_counter()
+            starttime = time.perf_counter()
             step = 0.0
-            data_tmp={}
+            data_tmp = {}
             job_number = self.configuration["grid_search_iterations"]
-            initial_search_repeats_in_grid_search = self.configuration["initial_search_repeats_in_grid_search"]
+            initial_search_repeats_in_grid_search = self.configuration[
+                "initial_search_repeats_in_grid_search"]
             #
             # confidence interval
             #
@@ -5298,37 +6468,47 @@ class MetabolicModel:
                 if ci['data'][(group, rid)]['use'] != 'on': continue
                 flux_opt_rid = flux[group][rid]['value']
 
-
-                data={(group, rid):{"flux_data":[flux_opt_rid],"rss_data":[rss_bestfit],"state":["Best fit"],"log":{},"raw_flux_data":[[flux["reaction"][i]["value"] for i in self.reaction_ids]]}}
+                data = {
+                    (group, rid): {
+                        "flux_data": [flux_opt_rid],
+                        "rss_data": [rss_bestfit],
+                        "state": ["Best fit"],
+                        "log": {},
+                        "raw_flux_data": [[
+                            flux["reaction"][i]["value"]
+                            for i in self.reaction_ids
+                        ]]
+                    }
+                }
                 data_tmp.update(data)
 
-                flux_lower =ci['data'][(group, rid)]["lower_boundary"]
-                flux_upper =ci['data'][(group, rid)]["upper_boundary"]
-
-
+                flux_lower = ci['data'][(group, rid)]["lower_boundary"]
+                flux_upper = ci['data'][(group, rid)]["upper_boundary"]
 
                 # Grid number is 20
-                if (flux_upper-flux_lower)>=100:
-                    n=15
+                if (flux_upper - flux_lower) >= 100:
+                    n = 15
                 else:
-                    n=10
+                    n = 10
 
                 if callbacklevel >= 2:
-                    print("Searching:", rid, "flux_opt ",flux_opt_rid, "lb ", flux_lower," ub ",flux_upper, "n=", n)
+                    print("Searching:", rid, "flux_opt ", flux_opt_rid, "lb ",
+                          flux_lower, " ub ", flux_upper, "n=", n)
                 #
                 # Store original metabolic constrains
                 #
-                temp_type, temp_value, temp_stdev = self.get_constrain(group, rid)
+                temp_type, temp_value, temp_stdev = self.get_constrain(
+                    group, rid)
                 #
                 # Set initial search to upward
                 #
                 temp_array_initial_fluxes = []
                 counter_of_missed_initial_state = 0
                 #
-                for i in range(int(n+1)):
-                    if  counter_of_missed_initial_state > 5:
+                for i in range(int(n + 1)):
+                    if counter_of_missed_initial_state > 5:
                         break
-                    step = (flux_upper-flux_opt_rid) * (0.5**(n-i))
+                    step = (flux_upper - flux_opt_rid) * (0.5**(n - i))
                     fixed_flux = flux_opt_rid + step
                     if fixed_flux >= flux_upper:
                         fixed_flux = flux_upper
@@ -5337,27 +6517,47 @@ class MetabolicModel:
                     #
                     # Fix reaction
                     #
-                    self.set_constrain(group, rid, "fixed", value = fixed_flux, stdev = 1.0)
+                    self.set_constrain(group,
+                                       rid,
+                                       "fixed",
+                                       value=fixed_flux,
+                                       stdev=1.0)
                     self.update()
                     if callbacklevel >= 3:
-                        print("Fixed for initial search:", rid, "flux_opt ",flux_opt_rid, "value", fixed_flux,flux_lower,flux_upper, "interation", i)
+                        print("Fixed for initial search:", rid, "flux_opt ",
+                              flux_opt_rid, "value", fixed_flux, flux_lower,
+                              flux_upper, "interation", i)
 
                     initial_state_flag = 0
 
                     for job_n in range(job_number):
-                        state, flux_opt = self.generate_initial_states(initial_search_repeats_in_grid_search, 1, template = flux, method = "parallel")
+                        state, flux_opt = self.generate_initial_states(
+                            initial_search_repeats_in_grid_search,
+                            1,
+                            template=flux,
+                            method="parallel")
                         if len(flux_opt) == 0:
                             if callbacklevel >= 3:
-                                print("Can't find initial state using template:", rid, "flux_opt ",flux_opt_rid, "value", fixed_flux, "interation", i, "job", job_n)
-                            state, flux_opt = self.generate_initial_states(initial_search_repeats_in_grid_search, 1, method = "parallel")
+                                print(
+                                    "Can't find initial state using template:",
+                                    rid, "flux_opt ", flux_opt_rid, "value",
+                                    fixed_flux, "interation", i, "job", job_n)
+                            state, flux_opt = self.generate_initial_states(
+                                initial_search_repeats_in_grid_search,
+                                1,
+                                method="parallel")
                         #
                         # When initial flux could not be found
                         #
                         if len(flux_opt) == 0:
                             if callbacklevel >= 3:
-                                print("Can't find initial state:", rid, "flux_opt ",flux_opt_rid, "value", fixed_flux, "interation", i, "job", job_n)
+                                print("Can't find initial state:", rid,
+                                      "flux_opt ", flux_opt_rid, "value",
+                                      fixed_flux, "interation", i, "job",
+                                      job_n)
                             continue
-                        temp_array_initial_fluxes.append((group, rid, fixed_flux, flux_opt))
+                        temp_array_initial_fluxes.append(
+                            (group, rid, fixed_flux, flux_opt))
                         initial_state_flag = initial_state_flag + 1
                     #
                     # if initial state was found
@@ -5372,16 +6572,17 @@ class MetabolicModel:
                         data_tmp[(group, rid)]["flux_data"].append(fixed_flux)
                         data_tmp[(group, rid)]["rss_data"].append(thres * 10.0)
                         data_tmp[(group, rid)]["raw_flux_data"].append([])
-                        data_tmp[(group, rid)]["state"].append("Failed to find initial state") #
+                        data_tmp[(group, rid)]["state"].append(
+                            "Failed to find initial state")  #
                 #
                 # Set initial search to upward
                 #
                 counter_of_missed_initial_state = 0
                 #
-                for i in range(int(n+1)):
-                    if  counter_of_missed_initial_state > 5:
+                for i in range(int(n + 1)):
+                    if counter_of_missed_initial_state > 5:
                         break
-                    step = (flux_opt_rid - flux_lower) * (0.5**(n-i))
+                    step = (flux_opt_rid - flux_lower) * (0.5**(n - i))
                     fixed_flux = flux_opt_rid - step
                     if fixed_flux >= flux_upper:
                         fixed_flux = flux_upper
@@ -5390,27 +6591,47 @@ class MetabolicModel:
                     #
                     # Fix reaction
                     #
-                    self.set_constrain(group, rid, "fixed", value = fixed_flux, stdev = 1.0)
+                    self.set_constrain(group,
+                                       rid,
+                                       "fixed",
+                                       value=fixed_flux,
+                                       stdev=1.0)
                     if callbacklevel >= 3:
-                        print("Fixed for initial search:", rid, "flux_opt ",flux_opt_rid, "value", fixed_flux,flux_lower,flux_upper, "interation", i)
+                        print("Fixed for initial search:", rid, "flux_opt ",
+                              flux_opt_rid, "value", fixed_flux, flux_lower,
+                              flux_upper, "interation", i)
                     self.update()
 
                     initial_state_flag = 0
 
                     for job_n in range(job_number):
-                        state, flux_opt = self.generate_initial_states(initial_search_repeats_in_grid_search, 1, template = flux, method = "parallel")
+                        state, flux_opt = self.generate_initial_states(
+                            initial_search_repeats_in_grid_search,
+                            1,
+                            template=flux,
+                            method="parallel")
                         if len(flux_opt) == 0:
                             if callbacklevel >= 3:
-                                print("Can't find initial state using template:", rid, "flux_opt ",flux_opt_rid, "value", fixed_flux, "interation", i, "job", job_n)
-                            state, flux_opt = self.generate_initial_states(initial_search_repeats_in_grid_search, 1, method = "parallel")
+                                print(
+                                    "Can't find initial state using template:",
+                                    rid, "flux_opt ", flux_opt_rid, "value",
+                                    fixed_flux, "interation", i, "job", job_n)
+                            state, flux_opt = self.generate_initial_states(
+                                initial_search_repeats_in_grid_search,
+                                1,
+                                method="parallel")
                         #
                         # When initial flux could not be found
                         #
                         if len(flux_opt) == 0:
                             if callbacklevel >= 3:
-                                print("Can't find initial state:", rid, "flux_opt ",flux_opt_rid, "value", fixed_flux, "interation", i, "job", job_n)
+                                print("Can't find initial state:", rid,
+                                      "flux_opt ", flux_opt_rid, "value",
+                                      fixed_flux, "interation", i, "job",
+                                      job_n)
                             continue
-                        temp_array_initial_fluxes.append((group, rid, fixed_flux, flux_opt))
+                        temp_array_initial_fluxes.append(
+                            (group, rid, fixed_flux, flux_opt))
                         initial_state_flag = initial_state_flag + 1
                     #
                     # if initial state was found
@@ -5425,41 +6646,60 @@ class MetabolicModel:
                         data_tmp[(group, rid)]["flux_data"].append(fixed_flux)
                         data_tmp[(group, rid)]["rss_data"].append(thres * 10.0)
                         data_tmp[(group, rid)]["raw_flux_data"].append([])
-                        data_tmp[(group, rid)]["state"].append("Failed to find initial state") #
+                        data_tmp[(group, rid)]["state"].append(
+                            "Failed to find initial state")  #
                 #
                 # Pitch jobs to pp
                 #
-                jobs=[]
-                jobsparameters=[]
+                jobs = []
+                jobsparameters = []
                 #job_server = pp.Server(ncpus = ncpus, ppservers=ppservers, restart=True, socket_timeout=7200)
-                for (group_temp, rid_temp, fixed_flux, flux_opt) in reversed(temp_array_initial_fluxes):
-                    self.set_constrain(group, rid, "fixed", value = fixed_flux, stdev = 1.0)
+                for (group_temp, rid_temp, fixed_flux,
+                     flux_opt) in reversed(temp_array_initial_fluxes):
+                    self.set_constrain(group,
+                                       rid,
+                                       "fixed",
+                                       value=fixed_flux,
+                                       stdev=1.0)
                     self.update()
                     try:
                         rss = self.calc_rss(flux_opt)
                     except:
                         if callbacklevel >= 3:
-                            print("Skipped:", rid, "flux_opt ",flux_opt_rid, "value", fixed_flux)
+                            print("Skipped:", rid, "flux_opt ", flux_opt_rid,
+                                  "value", fixed_flux)
                         continue
 
                     if callbacklevel >= 3:
-                        print("Fixed for fitting:", rid, "flux_opt ",flux_opt_rid, "value", fixed_flux)
+                        print("Fixed for fitting:", rid, "flux_opt ",
+                              flux_opt_rid, "value", fixed_flux)
 
-                    parameters = self.fitting_flux(method = 'deep', flux = flux_opt, output = 'for_parallel')
+                    parameters = self.fitting_flux(method='deep',
+                                                   flux=flux_opt,
+                                                   output='for_parallel')
                     jobs.append(parameters)
-                    jobsparameters.append(((group, rid),fixed_flux, flux_opt))
+                    jobsparameters.append(((group, rid), fixed_flux, flux_opt))
                     if callbacklevel >= 3:
-                        print("New job was added to joblib:", rid, "flux_opt ",flux_opt_rid, "value", fixed_flux)
+                        print("New job was added to joblib:", rid, "flux_opt ",
+                              flux_opt_rid, "value", fixed_flux)
 
                 if callbacklevel >= 3:
                     print("Waiting for joblib response")
                 #
-                result = Parallel(n_jobs=ncpus)([delayed(optimize.fit_r_mdv_deep)(configuration, experiments, numbers, vectors, matrixinv, calmdv_text, flux_temp) for (configuration, experiments, numbers, vectors, matrixinv, calmdv_text, flux_temp) in jobs])
+                result = Parallel(n_jobs=ncpus)([
+                    delayed(optimize.fit_r_mdv_deep)(configuration,
+                                                     experiments, numbers,
+                                                     vectors, matrixinv,
+                                                     calmdv_text, flux_temp)
+                    for (configuration, experiments, numbers, vectors,
+                         matrixinv, calmdv_text, flux_temp) in jobs
+                ])
 
                 #
                 # Return to original position
                 #
-                self.set_constrain(group, rid, temp_type, temp_value, temp_stdev)
+                self.set_constrain(group, rid, temp_type, temp_value,
+                                   temp_stdev)
                 self.update()
 
                 if callbacklevel >= 3:
@@ -5478,19 +6718,19 @@ class MetabolicModel:
                         #
                         # Large value is used when falied
                         #
-                        rss = 1000000000000 #★200317追加　落ちてないのかfialしたのか判断できないので固定値にした
+                        rss = 1000000000000  #★200317追加　落ちてないのかfialしたのか判断できないので固定値にした
                         #rss = thres * 10.0 + abs(flux_value-flux_opt) * 0.00001
                         #opt_flux = []
                         state = "Failed in optimization"
                     else:
                         state, rss, opt_flux, Rm_ind_sol = results
-                        state =  "Finished successfully "
+                        state = "Finished successfully "
                     #
                     #  Large value is used when falied
                     #
                     if len(opt_flux) == 0:
                         #continue
-                        rss = 1000000000000 #★200317追加　落ちてないのかfialしたのか判断できないので固定値にした
+                        rss = 1000000000000  #★200317追加　落ちてないのかfialしたのか判断できないので固定値にした
                         #rss = thres * 10.0 + abs(flux_value-flux_opt) * 0.00001
                         opt_flux = []
                         state = "Failed in optimization"
@@ -5500,16 +6740,19 @@ class MetabolicModel:
                     data_tmp[(group, rid)]["flux_data"].append(flux_value)
                     data_tmp[(group, rid)]["rss_data"].append(rss)
                     data_tmp[(group, rid)]["raw_flux_data"].append(opt_flux)
-                    data_tmp[(group, rid)]["state"].append(state) #★200517追加　落ちてないのかfialしたのか判断できないので固定値にした
+                    data_tmp[(group, rid)]["state"].append(
+                        state)  #★200517追加　落ちてないのかfialしたのか判断できないので固定値にした
 
                     if callbacklevel >= 3:
-                        print("Finished:", group, rid, "flux_opt ",flux_opt_rid, "lb ", flux_lower,", ub ",flux_upper, "flux_fixed", flux_value, "rss", rss, "state", state)
+                        print("Finished:", group, rid, "flux_opt ",
+                              flux_opt_rid, "lb ", flux_lower, ", ub ",
+                              flux_upper, "flux_fixed", flux_value, "rss", rss,
+                              "state", state)
             #
             # Cals again around thres
             #
             for group, rid in sorted(ci['data'].keys()):
                 if ci['data'][(group, rid)]['use'] != 'on': continue
-
 
                 flux_upper = ci['data'][(group, rid)]['upper_boundary']
                 flux_lower = ci['data'][(group, rid)]['lower_boundary']
@@ -5518,58 +6761,75 @@ class MetabolicModel:
                 rss_values_array_tmp = data_tmp[(group, rid)]['rss_data']
                 raw_flux_array_tmp = data_tmp[(group, rid)]['raw_flux_data']
 
-                data_sorted = sorted([(x, rss_values_array_tmp[i]) for i, x in enumerate(flux_values_array_tmp)], key = lambda s: s[0])
+                data_sorted = sorted(
+                    [(x, rss_values_array_tmp[i])
+                     for i, x in enumerate(flux_values_array_tmp)],
+                    key=lambda s: s[0])
                 #
                 # Add right and left end points
                 #
-                interval = flux_upper - flux_lower # Added at 200517 to exactly detect edges
-                data_sorted.append((flux_upper + interval * 0.0001, thres * 11.0))
-                data_sorted.insert(0, (flux_lower - (interval * 0.0001), thres * 11.0))
+                interval = flux_upper - flux_lower  # Added at 200517 to exactly detect edges
+                data_sorted.append(
+                    (flux_upper + interval * 0.0001, thres * 11.0))
+                data_sorted.insert(0, (flux_lower -
+                                       (interval * 0.0001), thres * 11.0))
                 #
                 # points under the threshold
                 #
-                below_threshold  = [x for x in data_sorted if x[1] < thres]
+                below_threshold = [x for x in data_sorted if x[1] < thres]
                 # Detect just before the lower boundary
                 flux_previous_left = below_threshold[0][0]
                 # Detect just before the upper boundary
                 flux_previous_right = below_threshold[-1][0]
 
                 # Detect just next to the boundary
-                flux_next_left  = max([x[0] for x in data_sorted if x[0] < flux_previous_left])
-                flux_next_right  = min([x[0] for x in data_sorted if x[0] > flux_previous_right])
-                data_tmp[(group, rid)]["log"]["1st previous_left"] = flux_previous_left
-                data_tmp[(group, rid)]["log"]["1st previous_right"] = flux_previous_right
+                flux_next_left = max(
+                    [x[0] for x in data_sorted if x[0] < flux_previous_left])
+                flux_next_right = min(
+                    [x[0] for x in data_sorted if x[0] > flux_previous_right])
+                data_tmp[(
+                    group,
+                    rid)]["log"]["1st previous_left"] = flux_previous_left
+                data_tmp[(
+                    group,
+                    rid)]["log"]["1st previous_right"] = flux_previous_right
                 data_tmp[(group, rid)]["log"]["1st next_left"] = flux_next_left
-                data_tmp[(group, rid)]["log"]["1st next_right"] = flux_next_right
+                data_tmp[(group,
+                          rid)]["log"]["1st next_right"] = flux_next_right
 
                 #
                 # This part should be reconsiderd 200517
                 #
-                if (flux_next_right-flux_next_left)>=40:
-                    n=20
-                elif (flux_next_right-flux_next_left)>=5:
-                    n=10
+                if (flux_next_right - flux_next_left) >= 40:
+                    n = 20
+                elif (flux_next_right - flux_next_left) >= 5:
+                    n = 10
                 else:
-                    n=5
+                    n = 5
                 #
                 #
                 #
                 if callbacklevel == 2:
-                    print("Searching again:", rid, "lb ", flux_next_right," ub ",flux_next_left, "n=", n)
+                    print("Searching again:", rid, "lb ", flux_next_right,
+                          " ub ", flux_next_left, "n=", n)
                 if callbacklevel >= 3:
-                    print("Searching again:", rid,"previous_left ",flux_previous_left,", previous_right ",flux_previous_right, "next_left ",flux_next_left,", flux_next_right ",flux_next_right, "n=", n)
+                    print("Searching again:", rid, "previous_left ",
+                          flux_previous_left, ", previous_right ",
+                          flux_previous_right, "next_left ", flux_next_left,
+                          ", flux_next_right ", flux_next_right, "n=", n)
                 #
                 # Store original metabolic constrains
                 #
-                temp_type, temp_value, temp_stdev = self.get_constrain(group, rid)
+                temp_type, temp_value, temp_stdev = self.get_constrain(
+                    group, rid)
                 #
                 temp_array_initial_fluxes = []
-                for e in range (1,n):
+                for e in range(1, n):
                     #
                     #
                     # right direcition
-                    step = abs(flux_previous_right - flux_next_right)/n
-                    fixed_flux = flux_previous_right +step*e
+                    step = abs(flux_previous_right - flux_next_right) / n
+                    fixed_flux = flux_previous_right + step * e
                     if fixed_flux > flux_upper:
                         fixed_flux = flux_upper
                     if fixed_flux < flux_lower:
@@ -5577,27 +6837,47 @@ class MetabolicModel:
                     #
                     # Fix reaction
                     #
-                    self.set_constrain(group, rid, "fixed", value = fixed_flux, stdev = 1.0)
+                    self.set_constrain(group,
+                                       rid,
+                                       "fixed",
+                                       value=fixed_flux,
+                                       stdev=1.0)
                     if callbacklevel >= 3:
-                        print("Fixed for initial search:", rid, "flux_opt ",flux_opt_rid, "value", fixed_flux, "interation", e)
+                        print("Fixed for initial search:", rid, "flux_opt ",
+                              flux_opt_rid, "value", fixed_flux, "interation",
+                              e)
                     self.update()
 
                     initial_state_flag = 0
 
                     for job_n in range(job_number):
-                        state, flux_opt = self.generate_initial_states(initial_search_repeats_in_grid_search, 1, template = flux, method = "parallel")
+                        state, flux_opt = self.generate_initial_states(
+                            initial_search_repeats_in_grid_search,
+                            1,
+                            template=flux,
+                            method="parallel")
                         if len(flux_opt) == 0:
                             if callbacklevel >= 3:
-                                print("Can't find initial state using template:", rid, "flux_opt ",flux_opt_rid, "value", fixed_flux, "interation", e, "job", job_n)
-                            state, flux_opt = self.generate_initial_states(initial_search_repeats_in_grid_search, 1, method = "parallel")
+                                print(
+                                    "Can't find initial state using template:",
+                                    rid, "flux_opt ", flux_opt_rid, "value",
+                                    fixed_flux, "interation", e, "job", job_n)
+                            state, flux_opt = self.generate_initial_states(
+                                initial_search_repeats_in_grid_search,
+                                1,
+                                method="parallel")
                         #
                         # When initial flux could not be found
                         #
                         if len(flux_opt) == 0:
                             if callbacklevel >= 3:
-                                print("Can't find initial state:", rid, "flux_opt ",flux_opt_rid, "value", fixed_flux, "interation", e, "job", job_n)
+                                print("Can't find initial state:", rid,
+                                      "flux_opt ", flux_opt_rid, "value",
+                                      fixed_flux, "interation", e, "job",
+                                      job_n)
                             continue
-                        temp_array_initial_fluxes.append((group, rid, fixed_flux, flux_opt))
+                        temp_array_initial_fluxes.append(
+                            (group, rid, fixed_flux, flux_opt))
                         initial_state_flag = initial_state_flag + 1
                     #
                     # if initial state was found
@@ -5609,12 +6889,13 @@ class MetabolicModel:
                         data_tmp[(group, rid)]["flux_data"].append(fixed_flux)
                         data_tmp[(group, rid)]["rss_data"].append(thres * 10.0)
                         data_tmp[(group, rid)]["raw_flux_data"].append([])
-                        data_tmp[(group, rid)]["state"].append("Failed to find initial state") #
+                        data_tmp[(group, rid)]["state"].append(
+                            "Failed to find initial state")  #
                     #
                     # left reaction
                     #
-                    step = abs(flux_previous_left - flux_next_left)/n
-                    fixed_flux = flux_previous_left - step*e
+                    step = abs(flux_previous_left - flux_next_left) / n
+                    fixed_flux = flux_previous_left - step * e
                     if fixed_flux > flux_upper:
                         fixed_flux = flux_upper
                     if fixed_flux < flux_lower:
@@ -5622,25 +6903,45 @@ class MetabolicModel:
                     #
                     # Fix reaction
                     #
-                    self.set_constrain(group, rid, "fixed", value = fixed_flux, stdev = 1.0)
+                    self.set_constrain(group,
+                                       rid,
+                                       "fixed",
+                                       value=fixed_flux,
+                                       stdev=1.0)
                     if callbacklevel >= 3:
-                        print("Fixed for initial search:", rid, "flux_opt ",flux_opt_rid, "value", fixed_flux, "interation", e)
+                        print("Fixed for initial search:", rid, "flux_opt ",
+                              flux_opt_rid, "value", fixed_flux, "interation",
+                              e)
                     self.update()
                     initial_state_flag = 0
                     for job_n in range(job_number):
-                        state, flux_opt = self.generate_initial_states(initial_search_repeats_in_grid_search, 1, template = flux, method = "parallel")
+                        state, flux_opt = self.generate_initial_states(
+                            initial_search_repeats_in_grid_search,
+                            1,
+                            template=flux,
+                            method="parallel")
                         if len(flux_opt) == 0:
                             if callbacklevel >= 3:
-                                print("Can't find initial state using template:", rid, "flux_opt ",flux_opt_rid, "value", fixed_flux, "interation", e, "job", job_n)
-                            state, flux_opt = self.generate_initial_states(initial_search_repeats_in_grid_search, 1, method = "parallel")
+                                print(
+                                    "Can't find initial state using template:",
+                                    rid, "flux_opt ", flux_opt_rid, "value",
+                                    fixed_flux, "interation", e, "job", job_n)
+                            state, flux_opt = self.generate_initial_states(
+                                initial_search_repeats_in_grid_search,
+                                1,
+                                method="parallel")
                         #
                         # When initial flux could not be found
                         #
                         if len(flux_opt) == 0:
                             if callbacklevel >= 3:
-                                print("Can't find initial state:", rid, "flux_opt ",flux_opt_rid, "value", fixed_flux, "interation", e, "job", job_n)
+                                print("Can't find initial state:", rid,
+                                      "flux_opt ", flux_opt_rid, "value",
+                                      fixed_flux, "interation", e, "job",
+                                      job_n)
                             continue
-                        temp_array_initial_fluxes.append((group, rid, fixed_flux, flux_opt))
+                        temp_array_initial_fluxes.append(
+                            (group, rid, fixed_flux, flux_opt))
                         initial_state_flag = initial_state_flag + 1
                     #
                     # if initial state was found
@@ -5652,31 +6953,49 @@ class MetabolicModel:
                         data_tmp[(group, rid)]["flux_data"].append(fixed_flux)
                         data_tmp[(group, rid)]["rss_data"].append(thres * 10.0)
                         data_tmp[(group, rid)]["raw_flux_data"].append([])
-                        data_tmp[(group, rid)]["state"].append("Failed to find initial state") #
+                        data_tmp[(group, rid)]["state"].append(
+                            "Failed to find initial state")  #
                 #
                 # Pitch jobs to pp
                 #
-                jobs=[]
-                jobsparameters=[]
+                jobs = []
+                jobsparameters = []
                 #job_server = pp.Server(ncpus = ncpus, ppservers=ppservers, restart=True, socket_timeout=7200)
-                for (group_temp, rid_temp, fixed_flux, flux_opt) in temp_array_initial_fluxes:
-                    self.set_constrain(group, rid, "fixed", value = fixed_flux, stdev = 1.0)
+                for (group_temp, rid_temp, fixed_flux,
+                     flux_opt) in temp_array_initial_fluxes:
+                    self.set_constrain(group,
+                                       rid,
+                                       "fixed",
+                                       value=fixed_flux,
+                                       stdev=1.0)
                     if callbacklevel >= 3:
-                        print("Fixed for fitting:", rid, "flux_opt ",flux_opt_rid, "value", fixed_flux)
+                        print("Fixed for fitting:", rid, "flux_opt ",
+                              flux_opt_rid, "value", fixed_flux)
                     self.update()
-                    parameters = self.fitting_flux(method = 'deep', flux = flux_opt, output = 'for_parallel')
+                    parameters = self.fitting_flux(method='deep',
+                                                   flux=flux_opt,
+                                                   output='for_parallel')
                     jobs.append(copy.deepcopy(parameters))
-                    jobsparameters.append(((group, rid),fixed_flux, flux_opt))
+                    jobsparameters.append(((group, rid), fixed_flux, flux_opt))
                     if callbacklevel >= 3:
-                        print("New job was added to joblib:", rid, "flux_opt ",flux_opt_rid, "value", fixed_flux)
+                        print("New job was added to joblib:", rid, "flux_opt ",
+                              flux_opt_rid, "value", fixed_flux)
                 if callbacklevel >= 3:
                     print("Waiting for joblib response")
 
-                result = Parallel(n_jobs=ncpus)([delayed(optimize.fit_r_mdv_deep)(configuration, experiments, numbers, vectors, matrixinv, calmdv_text, flux_temp) for (configurationx, experiments, numbers, vectors, matrixinv, calmdv_text, flux_temp) in jobs])
+                result = Parallel(n_jobs=ncpus)([
+                    delayed(optimize.fit_r_mdv_deep)(configuration,
+                                                     experiments, numbers,
+                                                     vectors, matrixinv,
+                                                     calmdv_text, flux_temp)
+                    for (configurationx, experiments, numbers, vectors,
+                         matrixinv, calmdv_text, flux_temp) in jobs
+                ])
                 #
                 # Return to original position [need modificaton]
                 #
-                self.set_constrain(group, rid, temp_type, temp_value, temp_stdev)
+                self.set_constrain(group, rid, temp_type, temp_value,
+                                   temp_stdev)
                 self.update()
                 #
                 # Retrive results
@@ -5690,19 +7009,19 @@ class MetabolicModel:
                         #
                         # Large value is used when falied
                         #
-                        rss = 1000000000000 #★200317追加　落ちてないのかfialしたのか判断できないので固定値にした
+                        rss = 1000000000000  #★200317追加　落ちてないのかfialしたのか判断できないので固定値にした
                         #rss = thres * 10.0 + abs(flux_value-flux_opt) * 0.00001
                         #opt_flux = []
                         state = "Failed in optimization"
                     else:
                         state, rss, opt_flux, Rm_ind_sol = results
-                        state =  "Finished successfully "
+                        state = "Finished successfully "
                     #
                     #  Large value is used when falied
                     #
                     if len(opt_flux) == 0:
                         #continue
-                        rss = 1000000000000 #★200317追加　落ちてないのかfialしたのか判断できないので固定値にした
+                        rss = 1000000000000  #★200317追加　落ちてないのかfialしたのか判断できないので固定値にした
                         #rss = thres * 10.0 + abs(flux_value-flux_opt) * 0.00001
                         opt_flux = []
                         state = "Failed in optimization"
@@ -5712,10 +7031,14 @@ class MetabolicModel:
                     data_tmp[(group, rid)]["flux_data"].append(flux_value)
                     data_tmp[(group, rid)]["rss_data"].append(rss)
                     data_tmp[(group, rid)]["raw_flux_data"].append(opt_flux)
-                    data_tmp[(group, rid)]["state"].append(state) #★200517追加　落ちてないのかfialしたのか判断できないので固定値にした
+                    data_tmp[(group, rid)]["state"].append(
+                        state)  #★200517追加　落ちてないのかfialしたのか判断できないので固定値にした
 
                     if callbacklevel >= 3:
-                        print("Finished:", group, rid, "flux_opt ",flux_opt_rid, "lb ", flux_lower,", ub ",flux_upper, "flux_fixed", flux_value, "rss", rss, "state", state)
+                        print("Finished:", group, rid, "flux_opt ",
+                              flux_opt_rid, "lb ", flux_lower, ", ub ",
+                              flux_upper, "flux_fixed", flux_value, "rss", rss,
+                              "state", state)
 
             for (group, rid) in ci['data'].keys():
                 if ci['data'][(group, rid)]['use'] != 'on':
@@ -5732,13 +7055,18 @@ class MetabolicModel:
                 raw_flux_array_tmp = data_tmp[(group, rid)]['raw_flux_data']
                 state_array_tmp = data_tmp[(group, rid)]['state']
 
-                data_sorted = sorted([(x, rss_values_array_tmp[i]) for i, x in enumerate(flux_values_array_tmp)], key = lambda s: s[0])
+                data_sorted = sorted(
+                    [(x, rss_values_array_tmp[i])
+                     for i, x in enumerate(flux_values_array_tmp)],
+                    key=lambda s: s[0])
 
-                interval = flux_upper - flux_lower # Added at 200517 to exactly detect edges
-                data_sorted.append((flux_upper + interval * 0.0001, thres * 10.0))
-                data_sorted.insert(0, (flux_lower - (interval * 0.0001), thres * 10.0))
+                interval = flux_upper - flux_lower  # Added at 200517 to exactly detect edges
+                data_sorted.append(
+                    (flux_upper + interval * 0.0001, thres * 10.0))
+                data_sorted.insert(0, (flux_lower -
+                                       (interval * 0.0001), thres * 10.0))
 
-                below_threshold  = [x for x in data_sorted if x[1] < thres]
+                below_threshold = [x for x in data_sorted if x[1] < thres]
                 # Detect just before the lower boundary
                 flux_previous_left = below_threshold[0][0]
                 rss_previous_left = below_threshold[0][1]
@@ -5746,16 +7074,22 @@ class MetabolicModel:
                 flux_previous_right = below_threshold[-1][0]
                 rss_previous_right = below_threshold[-1][1]
                 # Detect just sfter the lower boundary
-                left_group  = sorted([x for x in data_sorted if x[0] < flux_previous_left], key = lambda s: s[1])
-                right_group  = sorted([x for x in data_sorted if x[0] > flux_previous_right], key = lambda s: s[1])
+                left_group = sorted(
+                    [x for x in data_sorted if x[0] < flux_previous_left],
+                    key=lambda s: s[1])
+                right_group = sorted(
+                    [x for x in data_sorted if x[0] > flux_previous_right],
+                    key=lambda s: s[1])
 
                 rss_next_left = left_group[0][1]
                 flux_next_left = left_group[0][0]
                 rss_next_right = right_group[0][1]
                 flux_next_right = right_group[0][0]
 
-
-                flux_lower = flux_previous_left - (flux_previous_left - flux_next_left) * (thres - rss_previous_left)/(rss_next_left - rss_previous_left)
+                flux_lower = flux_previous_left - (
+                    flux_previous_left - flux_next_left) * (
+                        thres - rss_previous_left) / (rss_next_left -
+                                                      rss_previous_left)
                 state_lower = "Determined"
                 #
                 # Check
@@ -5765,23 +7099,32 @@ class MetabolicModel:
                 if flux_lower < ci['data'][(group, rid)]['lower_boundary']:
                     flux_lower = ci['data'][(group, rid)]['lower_boundary']
 
-                flux_upper = flux_previous_right + (flux_next_right - flux_previous_right) * (thres - rss_previous_right)/(rss_next_right - rss_previous_right)
+                flux_upper = flux_previous_right + (
+                    flux_next_right - flux_previous_right) * (
+                        thres - rss_previous_right) / (rss_next_right -
+                                                       rss_previous_right)
                 state_upper = "Determined"
-                if flux_next_right > ci['data'][(group, rid)]['upper_boundary']:
+                if flux_next_right > ci['data'][(group,
+                                                 rid)]['upper_boundary']:
                     state_upper = "Not determined. Rearched to upper boundary"
                 if flux_upper > ci['data'][(group, rid)]['upper_boundary']:
                     flux_upper = ci['data'][(group, rid)]['upper_boundary']
                 #
                 # Detect lower bounary of confidence interval
                 #
-                data_tmp[(group, rid)]["log"]["2nd previous_left"] = flux_previous_left
-                data_tmp[(group, rid)]["log"]["2nd previous_right"] = flux_previous_right
+                data_tmp[(
+                    group,
+                    rid)]["log"]["2nd previous_left"] = flux_previous_left
+                data_tmp[(
+                    group,
+                    rid)]["log"]["2nd previous_right"] = flux_previous_right
                 data_tmp[(group, rid)]["log"]["2nd next_left"] = flux_next_left
-                data_tmp[(group, rid)]["log"]["2nd next_right"] = flux_next_right
-
+                data_tmp[(group,
+                          rid)]["log"]["2nd next_right"] = flux_next_right
 
                 if callbacklevel >= 2:
-                    print("Finished:", rid, 'Lower boundary:', flux_lower, 'Upper boundery' ,flux_upper)
+                    print("Finished:", rid, 'Lower boundary:', flux_lower,
+                          'Upper boundery', flux_upper)
 
                 ci['data'][(group, rid)]['upper_boundary'] = flux_upper
                 ci['data'][(group, rid)]['lower_boundary'] = flux_lower
@@ -5794,11 +7137,27 @@ class MetabolicModel:
                 #
                 # Grids with too large rss are removed
                 #
-                folds = outputthres #
-                flux_values_array = [flux_values_array_tmp[i] for (i, rsst) in enumerate(rss_values_array_tmp) if rsst < (thres * folds) ]
-                raw_flux_array = [raw_flux_array_tmp[i] for (i, rsst) in enumerate(rss_values_array_tmp) if rsst < thres * folds ]
-                rss_values_array = [rss_values_array_tmp[i] for (i, rsst)  in enumerate(rss_values_array_tmp) if rsst < thres * folds ]
-                state_array = [state_array_tmp[i] for (i, rsst)  in enumerate(rss_values_array_tmp) if rsst < thres * folds ]
+                folds = outputthres  #
+                flux_values_array = [
+                    flux_values_array_tmp[i]
+                    for (i, rsst) in enumerate(rss_values_array_tmp)
+                    if rsst < (thres * folds)
+                ]
+                raw_flux_array = [
+                    raw_flux_array_tmp[i]
+                    for (i, rsst) in enumerate(rss_values_array_tmp)
+                    if rsst < thres * folds
+                ]
+                rss_values_array = [
+                    rss_values_array_tmp[i]
+                    for (i, rsst) in enumerate(rss_values_array_tmp)
+                    if rsst < thres * folds
+                ]
+                state_array = [
+                    state_array_tmp[i]
+                    for (i, rsst) in enumerate(rss_values_array_tmp)
+                    if rsst < thres * folds
+                ]
 
                 ci['data'][(group, rid)]['flux_data'] = flux_values_array
                 ci['data'][(group, rid)]['rss_data'] = rss_values_array
@@ -5820,13 +7179,12 @@ class MetabolicModel:
             # Show calc time
             #
             if callbacklevel >= 2:
-                endtime=time.perf_counter()
-                print("time elapsed ", endtime-starttime,"s")
+                endtime = time.perf_counter()
+                print("time elapsed ", endtime - starttime, "s")
 
         return ci
 
-
-    def load_states(self, filename, format = 'text'):
+    def load_states(self, filename, format='text'):
         """
         Load a text/csv file with 'reacton type' information to generate new states dict.
 
@@ -5866,32 +7224,32 @@ class MetabolicModel:
         flux_dict = {}
         for i, id in enumerate(self.reaction_ids):
             flux_dict[id] = {
-                'value':0.0,
+                'value': 0.0,
                 'stdev': 1.0,
-                'type':"free",
-                'reversible':self.reactions[id]['reversible'],
-                'order':self.reactions[id]['order'],
-                'lb':self.reactions[id]['lb'],
-                'ub':self.reactions[id]['ub'],
+                'type': "free",
+                'reversible': self.reactions[id]['reversible'],
+                'order': self.reactions[id]['order'],
+                'lb': self.reactions[id]['lb'],
+                'ub': self.reactions[id]['ub'],
             }
         conc_dict = {}
         for i, id in enumerate(self.metabolites):
             conc_dict[id] = {
-                'value':0.0,
+                'value': 0.0,
                 'stdev': 1.0,
-                'type':"free",
-                'lb':self.metabolites[id]['lb'],
-                'ub':self.metabolites[id]['ub'],
+                'type': "free",
+                'lb': self.metabolites[id]['lb'],
+                'ub': self.metabolites[id]['ub'],
             }
         reversible_dict = {}
         for i, id in enumerate(self.reversible):
             reversible_dict[id] = {
-                'value':0.0,
+                'value': 0.0,
                 'stdev': 1.0,
-                'type':"free",
-                'order':self.reversible[id]['order'],
-                'lb':self.reversible[id]['lb'],
-                'ub':self.reversible[id]['ub'],
+                'type': "free",
+                'order': self.reversible[id]['order'],
+                'lb': self.reversible[id]['lb'],
+                'ub': self.reversible[id]['ub'],
             }
 
         with open(filename, 'r') as f:
@@ -5927,10 +7285,13 @@ class MetabolicModel:
                     dict[rid]['ub'] = float(ub)
 
         f.close()
-        return {"reaction":flux_dict, "metabolite":conc_dict, "reversible": reversible_dict}
+        return {
+            "reaction": flux_dict,
+            "metabolite": conc_dict,
+            "reversible": reversible_dict
+        }
 
-
-    def save_states(self, dict, filename, format = 'text'):
+    def save_states(self, dict, filename, format='text'):
         """
         Save state dict to a text/csv file with 'type' information.
 
@@ -5958,32 +7319,40 @@ class MetabolicModel:
         # preparation of data
         #
         Data = []
-        Data.append(['State','Id','type','value','stdev','lb','ub'])
+        Data.append(['State', 'Id', 'type', 'value', 'stdev', 'lb', 'ub'])
         for rid in self.reaction_ids:
             dict_temp = dict["reaction"]
-            Data.append(['reaction', rid, str(dict_temp[rid]['type']),
-                        str(dict_temp[rid]['value']),
-                        str(dict_temp[rid]['stdev']),
-                        str(dict_temp[rid]['lb']),
-                        str(dict_temp[rid]['ub']),
-                        ])
+            Data.append([
+                'reaction',
+                rid,
+                str(dict_temp[rid]['type']),
+                str(dict_temp[rid]['value']),
+                str(dict_temp[rid]['stdev']),
+                str(dict_temp[rid]['lb']),
+                str(dict_temp[rid]['ub']),
+            ])
         for rid in dict["metabolite"]:
             dict_temp = dict["metabolite"]
-            Data.append(['metabolite', rid, str(dict_temp[rid]['type']),
-                        str(dict_temp[rid]['value']),
-                        str(dict_temp[rid]['stdev']),
-                        str(dict_temp[rid]['lb']),
-                        str(dict_temp[rid]['ub']),
-                        ])
+            Data.append([
+                'metabolite',
+                rid,
+                str(dict_temp[rid]['type']),
+                str(dict_temp[rid]['value']),
+                str(dict_temp[rid]['stdev']),
+                str(dict_temp[rid]['lb']),
+                str(dict_temp[rid]['ub']),
+            ])
         for rid in self.reversible.keys():
             dict_temp = dict["reversible"]
-            Data.append(['reversible', rid, str(dict_temp[rid]['type']),
-                        str(dict_temp[rid]['value']),
-                        str(dict_temp[rid]['stdev']),
-                        str(dict_temp[rid]['lb']),
-                        str(dict_temp[rid]['ub']),
-                        ])
-
+            Data.append([
+                'reversible',
+                rid,
+                str(dict_temp[rid]['type']),
+                str(dict_temp[rid]['value']),
+                str(dict_temp[rid]['stdev']),
+                str(dict_temp[rid]['lb']),
+                str(dict_temp[rid]['ub']),
+            ])
 
         try:
             with open(filename, 'w', newline='') as f:
@@ -5998,8 +7367,7 @@ class MetabolicModel:
         except:
             return False
 
-
-    def load_mdv_data(self, filename, format = 'text',output = "normal"):
+    def load_mdv_data(self, filename, format='text', output="normal"):
         """
         Load MDV data from the text file. This function generate new instance of mfapy.mdv class from a instance of mfapy.model.
 
@@ -6035,5 +7403,4 @@ class MetabolicModel:
         mdvloaded.load(filename, format, output)
         #
         #
-        return(mdvloaded)
-
+        return (mdvloaded)
