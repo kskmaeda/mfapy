@@ -483,7 +483,7 @@ class Testmfapy(unittest.TestCase):
         actual = self.model.metabolites['AKG']['ub']
         self.assertEqual(expected, actual)
 
-    def test_generate_flux_distribution(self):
+    def test_generate_state(self):
         flux_opt, state = self.model.generate_state()
         expected = "Determined"
         actual = state
@@ -546,7 +546,7 @@ class Testmfapy(unittest.TestCase):
 
     """
     def test_save_states(self):
-        flux_opt, state = self.model.generate_flux_distribution()
+        flux_opt, state = self.model.generate_state()
         actual = self.model.save_states(flux_opt, "Example_1_test.csv", format = 'csv')
         expected = True
         self.assertEqual(expected, actual)
@@ -558,7 +558,10 @@ class Testmfapy(unittest.TestCase):
         self.model.update()
 
         cs = self.model.generate_carbon_source_templete()
-        mdv1 = self.model.generate_mdv(state_dic, cs)
+
+        flux_opt, state = self.model.generate_state()
+        mdv1 = self.model.generate_mdv(flux_opt, cs)
+
 
         self.model.set_experiment('ex1', mdv1, cs)
         actual = self.model.experiments["ex1"]["mode"]
@@ -589,7 +592,8 @@ class Testmfapy(unittest.TestCase):
         self.model.update()
         cs = self.model.generate_carbon_source_templete()
         flux_opt, state = self.model.generate_state()
-        mdv1 = self.model.generate_mdv(state_dic, cs)
+
+        mdv1 = self.model.generate_mdv(flux_opt, cs)
         self.model.set_experiment('ex1', mdv1, cs)
 
         state, flux_initial1 = self.model.generate_initial_states(50, 1)
@@ -614,7 +618,7 @@ class Testmfapy(unittest.TestCase):
         state, RSS_bestfit, flux_opt_slsqp = self.model.fitting_flux(
             method='SLSQP', flux=flux_initial1)
         actual = state
-        expected = "Optimization terminated successfully"
+        expected = "Optimization terminated successfully."
         self.assertEqual(expected, actual)
         # call nlopt
         state, RSS_bestfit, flux_opt_slsqp = self.model.fitting_flux(
@@ -632,7 +636,7 @@ class Testmfapy(unittest.TestCase):
         self.model.set_constrain('reversible','FUM','free')
         self.model.update()
         cs = self.model.generate_carbon_source_templete()
-        flux_opt, state = self.model.generate_flux_distribution()
+        flux_opt, state = self.model.generate_state()
         mdv1 = self.model.generate_mdv(flux_opt, cs)
         self.model.set_experiment('ex1', mdv1, cs)
 
