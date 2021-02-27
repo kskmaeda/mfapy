@@ -1,4 +1,6 @@
-﻿#-------------------------------------------------------------------------------
+﻿#!/usr/bin/python
+# -*- coding: utf-8 -*-
+#-------------------------------------------------------------------------------
 # Name:        optimize.py
 # Purpose:     low level optimizer functions used in mfapy. These functions were separated from model instance for the parallel execution.
 #
@@ -8,40 +10,53 @@
 # Copyright:   (c) Fumio_Matsuda 2018
 # Licence:     MIT license
 #-------------------------------------------------------------------------------
+"""optimize.py:low level optimizer functions used in mfapy.
 
+These functions were separated from model instance for the parallel execution.
+
+Todo:
+    * Cleaning-up and support other optimizers
+
+"""
 import numpy as numpy
 import scipy as scipy
 import nlopt as nlopt
 #from numba import jit
 
 def initializing_Rm_fitting(numbers, vectors, matrixinv, template, initial_search_iteration_max, method = "fitting"):
-    """
-    Funcition to generate randomized initial flux dixtribution using scipy.optimize.minimize SLSQP
+    """Funcition to generate randomized initial flux dixtribution using scipy.optimize.minimize SLSQP
 
-    Parameters
-    ----------
-    numbers: "model.numbers" including various number related data of the model.
-    vectors: "model.vector" including various vector related data of the model.
-    matrixinv: "model.matrixinv" is a inversed matrix for flux calculation.
-    template: Dictionary of metabolic state. When template is available, metabolic state most similar to the template is generated. The function is used in the grid search.
-    initial_search_iteration_max: "configure["initial_search_iteration_max"]". Maximal number of interations (steps) allowed in each task to find feasible initial metabolic flux distribution.
-    method: "fitting" is only available.
+    Args:
+        numbers (dict): "model.numbers" including various number related data of the model.
 
-    Returns
-    -------
-    tmp_r: (list) metabolic state data (tmp_r = numpy.dot(matrixinv, Rm_temp)
-    Rm_temp: (list) metabolic state vector
-    Rm_ind: (list) independent flux vector
-    state: State of finishing condition "Failed"/"Determined"
+        vectors (dict): "model.vector" including various vector related data of the model.
 
-    Examples
-    --------
-    >>> tmp_r, Rm_temp, Rm_ind, state = optimize.initializing_Rm_fitting(numbers, vectors, matrixinv, template ,initial_search_iteration_max)
+        matrixinv (numpy 2d array): "model.matrixinv" is a inversed matrix of stoichiometry matrix for flux calculation.
+
+        template (dict): Dictionary of metabolic state. When template is available, metabolic state most similar to the template is generated. The function is used in the grid search.
+
+        initial_search_iteration_max (int): "configure["initial_search_iteration_max"]". Maximal number of interations (steps) allowed in each task to find feasible initial metabolic flux distribution.
+
+        method (str): "fitting" is only available.
+
+    Returns:
+
+        tmp_r (list) list of metabolic state data (tmp_r = numpy.dot(matrixinv, Rm_temp)
+
+        Rm_temp (list) metabolic state vector
+
+        Rm_ind (list) independent flux vector
+
+        state (str) State of finishing condition "Failed"/"Determined"
+
+    Examples:
+
+        >>> tmp_r, Rm_temp, Rm_ind, state = optimize.initializing_Rm_fitting(numbers, vectors, matrixinv, template ,initial_search_iteration_max)
 
 
-    See Also
-    --------
-    calc_protrude_scipy
+    See Also:
+
+        calc_protrude_scipy
 
     """
 
@@ -73,15 +88,15 @@ def initializing_Rm_fitting(numbers, vectors, matrixinv, template, initial_searc
         for j in range(3):
             message = "Initial state"
 
-            #ランダムな反応の最低値をランダムな値にする。
+            #Setting lower and upper boundaries
             lb_modified = list(lb)
             ub_modified = list(ub)
 
-            #適当に初期値を発生させる
+            #Generation of random initial independent vector
             for i in range(len(Rm_ind)):
                 Rm_ind[i] = (independent_ub[i] - independent_lb[i]) * numpy.random.rand() + independent_lb[i]
-            # Instantiate Optimization Problem
 
+            # Instantialization of Optimization Problem
             parameters = {}
             parameters['stoichiometric_num'] = numbers['independent_start']
             parameters['reaction_num']=numbers['independent_end']
@@ -140,23 +155,21 @@ def initializing_Rm_fitting(numbers, vectors, matrixinv, template, initial_searc
 
 
 def calc_protrude_scipy(independent_flux, *args):
-    """
-    Objective function for initializing_Rm_fitting (SLSQP)
-    Calc penalty score of metabolic state out side of the feasible space.
+    """Objective function used in initializing_Rm_fitting (SLSQP)
 
-    Parameters
-    ----------
-    independent_flux: vector of independent flux
-    *args: list of parameters.
+    This function calculates penalty score of metabolic state out side of the feasible space.
 
-    Returns
-    -------
-    f: Penalty score
+    Args:
+        independent_flux (array): vector of independent flux
+
+        *args (list): list of parameters.
+
+    Returns:
+        float: Penalty score
 
 
-    See Also
-    --------
-    initializing_Rm_fitting
+    See Also:
+        initializing_Rm_fitting
 
 
     """
@@ -205,24 +218,23 @@ def calc_protrude_scipy(independent_flux, *args):
     return f
 
 def calc_protrude_nlopt(independent_flux, grad, kwargs):
-    """
-    Objective function for initializing_Rm_fitting (nlpot)
+    """Objective function used in initializing_Rm_fitting (nlpot)
+
     Calc penalty score of metabolic state out side of the feasible space.
 
-    Parameters
-    ----------
-    independent_flux: vector of independent flux
-    grad: not used
-    *args: list of parameters.
+    Args:
+        independent_flux (array): vector of independent flux
 
-    Returns
-    -------
-    f: Penalty score
+        grad: not used
+
+        *args (array): list of parameters.
+
+    Returns:
+        float: Penalty score
 
 
-    See Also
-    --------
-    initializing_Rm_fitting
+    See Also:
+        initializing_Rm_fitting
 
 
     """
@@ -270,31 +282,40 @@ def calc_protrude_nlopt(independent_flux, grad, kwargs):
     return f
 
 def calc_MDV_from_flux(tmp_r, target_fragments, mdv_carbon_sources, func, timepoint = [], y0temp = []):
-    """
-    Low level function to calculate mdv vector and mdv hash from metabolic flux and carbon
-    source MDV using calmdv. This funcition is called from mfapy.metabolicmodel.show_results.
+    """Low level function to calculate mdv vector and mdv hash from metabolic flux and carbon source MDV using calmdv.
 
-    Parameters
-    ----------
-    tmp_r: list of metabolix state
-    target_fragments: list of targed mdvs for MDV calclation, model.target_fragments.keys()
-    mdv_carbon_sources: dict of mdv_carbon_sources in model.experiments[ex_id]['mdv_carbon_sources']
-    func: Dict of functions for MDV calclation in model.func
-    timepoint: For INST mode only. timepoints for MDV comparison in model.experiments[ex_id]['timepoint']
-    y0temp: Start IDV state for INST mode
-
-    Returns
-    -------
-    f: Penalty score
-
-    Example
-    -------
-    mdv_exp, mdv_hash = optimize.calc_MDV_from_flux(tmp_r, target_fragments_temp, mdv_carbon_sources_temp, self.func)
+    This funcition is called from mfapy.metabolicmodel.show_results.
 
 
-    See Also
-    --------
-    mfapy.metabolicmodel.show_results
+    Args:
+        tmp_r (array): list of metabolic state data (tmp_r = numpy.dot(matrixinv, Rm_temp)
+
+        target_fragments (array): list of targed mdvs for MDV calclation, model.target_fragments.keys()
+
+        mdv_carbon_sources (dict): dict of mdv_carbon_sources in model.experiments[ex_id]['mdv_carbon_sources']
+
+        func (dict): Dict of functions for MDV calclation in model.func
+
+        timepoint (array): For INST mode only. timepoints for MDV comparison in model.experiments[ex_id]['timepoint']
+            When the length of timepoint array >= 1, INST mode is used.
+
+        y0temp (dict): Start IDV state for INST mode
+
+    Returns:
+        13C-MFA mode:
+            * mdv (array) list of MDV data
+
+            * mdv_hash (dict) dict of MDV data
+
+        INST-MFA mode:
+            * mdv (array) array of mdv at each time point
+
+            * mdv_hash (array) array of mdv_hash at each time point
+    Example:
+        >>> mdv_exp, mdv_hash = optimize.calc_MDV_from_flux(tmp_r, target_fragments_temp, mdv_carbon_sources_temp, self.func)
+
+    See Also:
+        mfapy.metabolicmodel.show_results
 
 
     """
@@ -309,35 +330,42 @@ def calc_MDV_from_flux(tmp_r, target_fragments, mdv_carbon_sources, func, timepo
 
 
 def fit_r_mdv_scipy(configure, experiments, numbers, vectors, matrixinv, func, flux,  method = "SLSQP"):
-    """
-    Low level function for model fitting using scipy.optimize.minimize
+    """Low level function for model fitting using scipy.optimize.minimize
 
-    Parameters
-    ----------
-    configures: "model.configures" including various configulatoins of the model.
-    experiments: "model.experiments" including experiments defined in the model.
-    numbers: "model.numbers" including various numbers of the model.
-    vectors: "model.vector" including various vectors of the model.
-    matrixinv: "model.matrixinv" is a inversed matrix for the flux calculation.
-    func: Dict of functions for MDV calclation in model.func
-    flux: Dictionary of initial metabolic state.
-    method: "SLSQP" and "COBYLA" are available
+    Args:
+        configures (dict): "model.configures" including various configulatoins of the model.
 
-    Returns
-    -------
-    state: finishing condition
-    kai: Residual sum of square of fitted metabolic state
-    opt_flux: list of fitted metabolix state
-    Rm_ind_sol: list of fitted independent flux
+        experiments (dict): "model.experiments" including experiments defined in the model.
 
-    Example
-    -------
-    state, kai, opt_flux, Rm_ind_sol = optimize.fit_r_mdv_scipy(configure, self.experiments, numbers, vectors, self.matrixinv, self.func, flux, method = "SLSQP")
+        numbers (dict): "model.numbers" including various numbers of the model.
+
+        vectors (dict): "model.vector" including various vectors of the model.
+
+        matrixinv (2d array): "model.matrixinv" is a inversed matrix for the flux calculation.
+
+        func (dict): Dict of functions for MDV calclation in model.func
+
+        flux (dict): Dictionary of initial metabolic state.
+
+        method (str): "SLSQP" and "COBYLA" are available
+
+    Returns:
+
+        * state (str) finishing condition
+
+        * kai (float) Residual sum of square of fitted metabolic state
+
+        * opt_flux (array) list of fitted metabolix state
+
+        * Rm_ind_sol (array) list of fitted independent flux
+
+    Example:
+
+        >>> state, kai, opt_flux, Rm_ind_sol = optimize.fit_r_mdv_scipy(configure, self.experiments, numbers, vectors, self.matrixinv, self.func, flux, method = "SLSQP")
 
 
-    See Also
-    --------
-    calc_MDV_residue_scipy
+    See Also:
+        calc_MDV_residue_scipy
 
     """
 
@@ -481,35 +509,42 @@ def fit_r_mdv_scipy(configure, experiments, numbers, vectors, matrixinv, func, f
 
 
 def fit_r_mdv_nlopt(configure, experiments, numbers, vectors, matrixinv, func, flux,  method = "LN_PRAXIS"):
-    """
-    Low level function for model fitting using nlopt.opt
+    """Low level function for model fitting using nlopt.opt
 
-    Parameters
-    ----------
-    configures: "model.configures" including various configulatoins of the model.
-    experiments: "model.experiments" including experiments defined in the model.
-    numbers: "model.numbers" including various numbers of the model.
-    vectors: "model.vector" including various vectors of the model.
-    matrixinv: "model.matrixinv" is a inversed matrix for the flux calculation.
-    func: Dict of functions for MDV calclation in model.func
-    flux: Dictionary of initial metabolic state.
-    method: "LN_COBYLA", "LN_BOBYQA", "LN_NEWUOA", "LN_PRAXIS", "LN_SBPLX", "LN_NELDERMEAD", "GN_DIRECT_L", "GN_CRS2_LM","GN_ESCH"
+    Args:
+        configures (dict): "model.configures" including various configulatoins of the model.
 
-    Returns
-    -------
-    state: finishing condition
-    kai: Residual sum of square of fitted metabolic state
-    opt_flux: list of fitted metabolix state
-    Rm_ind_sol: list of fitted independent flux
+        experiments (dict): "model.experiments" including experiments defined in the model.
 
-    Example
-    -------
-    state, kai, opt_flux, Rm_ind_sol = optimize.fit_r_mdv_nlopt(configure, self.experiments, numbers, vectors, self.matrixinv, self.func, flux, method = "LN_PRAXIS")
+        numbers (dict): "model.numbers" including various numbers of the model.
+
+        vectors (dict): "model.vector" including various vectors of the model.
+
+        matrixinv (2d array): "model.matrixinv" is a inversed matrix for the flux calculation.
+
+        func (dict): Dict of functions for MDV calclation in model.func
+
+        flux (dict): Dictionary of initial metabolic state.
+
+        method (str): "LN_COBYLA", "LN_BOBYQA", "LN_NEWUOA", "LN_PRAXIS", "LN_SBPLX", "LN_NELDERMEAD", "GN_DIRECT_L", "GN_CRS2_LM","GN_ESCH"
+
+    Returns:
+
+        * state (str) finishing condition
+
+        * kai (float) Residual sum of square of fitted metabolic state
+
+        * opt_flux (array) list of fitted metabolix state
+
+        * Rm_ind_sol (array) list of fitted independent flux
+
+    Example:
+
+        >>> state, kai, opt_flux, Rm_ind_sol = optimize.fit_r_mdv_nlopt(configure, self.experiments, numbers, vectors, self.matrixinv, self.func, flux, method = "LN_PRAXIS")
 
 
-    See Also
-    --------
-    calc_MDV_residue_nlopt
+    See Also:
+        calc_MDV_residue_nlopt
 
     """
 
@@ -667,38 +702,49 @@ def fit_r_mdv_nlopt(configure, experiments, numbers, vectors, matrixinv, func, f
 
 
 def fit_r_mdv_deep(configure, experiments, numbers, vectors, matrixinv, func, flux):
-    """
-    Low level function for model fitting by interations of fittings.
-    2n th iteration:  SLSQP
-    2n + 1 th iteration:  LN_PRAXIS
+    """Low level function for model fitting by iterative fittings.
+
+    * 1st iteration:  GN_CRS2_LM (global optimizer)
+
+    * 2n th iterations:  SLSQP (local)
+
+    * 2n + 1 th iterations:  LN_SBPLX (local)
+
     This combination is empirically best
 
-    Parameters
-    ----------
-    configures: "model.configures" including various configulatoins of the model.
-    experiments: "model.experiments" including experiments defined in the model.
-    numbers: "model.numbers" including various numbers of the model.
-    vectors: "model.vector" including various vectors of the model.
-    matrixinv: "model.matrixinv" is a inversed matrix for the flux calculation.
-    func: Dict of functions for MDV calclation in model.func
-    flux: Dictionary of initial metabolic state.
+    Args:
+        configures (dict): "model.configures" including various configulatoins of the model.
 
-    Returns
-    -------
-    state: finishing condition
-    kai: Residual sum of square of fitted metabolic state
-    opt_flux: list of fitted metabolix state
-    Rm_ind_sol: list of fitted independent flux
+        experiments (dict): "model.experiments" including experiments defined in the model.
 
-    Example
-    -------
-    state, kai, opt_flux, Rm_ind_sol = optimize.fit_r_deep(configure, self.experiments, numbers, vectors, self.matrixinv, self.func, flux)
+        numbers (dict): "model.numbers" including various numbers of the model.
+
+        vectors (dict): "model.vector" including various vectors of the model.
+
+        matrixinv (2d array): "model.matrixinv" is a inversed matrix for the flux calculation.
+
+        func (dict): Dict of functions for MDV calclation in model.func
+
+        flux (dict): Dictionary of initial metabolic state.
+
+    Returns:
+
+        * state (str) finishing condition
+
+        * kai (float) Residual sum of square of fitted metabolic state
+
+        * opt_flux (array) list of fitted metabolix state
+
+        * Rm_ind_sol (array) list of fitted independent flux
+
+    Example:
+
+        >>> state, kai, opt_flux, Rm_ind_sol = optimize.fit_r_deep(configure, self.experiments, numbers, vectors, self.matrixinv, self.func, flux)
 
 
-    See Also
-    --------
-    optimize.fit_r_nlopt
-    optimize.fit_r_scipy
+    See Also:
+        optimize.fit_r_nlopt
+        optimize.fit_r_scipy
 
 
     """
@@ -730,7 +776,7 @@ def fit_r_mdv_deep(configure, experiments, numbers, vectors, matrixinv, func, fl
             print("Deep",k,"Start SLSQP method######################################################################")
         state, kai, flux, Rm_ind_sol = fit_r_mdv_scipy(configure, experiments, numbers, vectors, matrixinv, func, flux, method = "SLSQP")
         if (callbacklevel >= 4):
-            print("Deep",k,"Start LN_PRAXIS method##################################################################")
+            print("Deep",k,"Start LN_SBPLX method###################################################################")
         state, kai, flux, Rm_ind_sol = fit_r_mdv_nlopt(configure, experiments, numbers, vectors, matrixinv, func, flux, method = "LN_PRAXIS")
 
 
@@ -742,22 +788,19 @@ def fit_r_mdv_deep(configure, experiments, numbers, vectors, matrixinv, func, fl
 
 
 def calc_MDV_residue_scipy(x, *args):
-    """
-    Low level function for residual sum of square calculation for model fitting using scipy.optimize.minimize
+    """Low level function for residual sum of square calculation for model fitting using scipy.optimize.minimize
 
-    Parameters
-    ----------
-    x: list. vector of independent flux
-    *args: list of parameters.
+    Args:
+        x (array): vector of independent flux.
 
-    Returns
-    -------
-    f: RSS + Penalty score (When out side of the lower and upper boundaries)
+        *args (array): list of parameters.
+
+    Returns:
+        float: RSS + Penalty score (When out side of the lower and upper boundaries)
 
 
-    See Also
-    --------
-    fit_r_mdv_scipy
+    See Also:
+        fit_r_mdv_scipy
 
     """
     kwargs = args[0]
@@ -813,22 +856,18 @@ def calc_MDV_residue_scipy(x, *args):
     return f+sum
 
 def calc_MDV_residue_nlopt(x, grad, kwargs):
-    """
-    Low level function for residual sum of square calculation for model fitting using nlopt.nlopt
+    """Low level function for residual sum of square calculation for model fitting using nlopt.nlopt
 
-    Parameters
-    ----------
-    x: list. vector of independent flux
-    *args: list of parameters.
+    Args:
+        x (array): vector of independent flux.
 
-    Returns
-    -------
-    f: RSS + Penalty score (When out side of the lower and upper boundaries)
+        *args (array): list of parameters.
 
+    Returns:
+        float:  RSS + Penalty score (When out side of the lower and upper boundaries)
 
-    See Also
-    --------
-    fit_r_mdv_scipy
+    See Also:
+        fit_r_mdv_scipy
 
     """
     Rm_initial = kwargs['Rm_initial']
@@ -885,22 +924,20 @@ def calc_MDV_residue_nlopt(x, grad, kwargs):
 
 
 def calc_MDV_residue(x, *args, **kwargs):
-    """
-    Low level function for residual sum of square calculation from mfapy.metabolicmodel.MetaboliModel.calc_rss
+    """Low level function for residual sum of square calculation from mfapy.metabolicmodel.MetaboliModel.calc_rss
 
-    Parameters
-    ----------
-    x: list. vector of independent flux
-    *args: list of parameters.
-    **kwargs: dic of parameters.
-    Returns
-    -------
-    f: RSS + Penalty score (When out side of the lower and upper boundaries)
+    Args:
+        x (array): vector of independent flux.
 
+        *args (array): list of parameters.
 
-    See Also
-    --------
-    fit_r_mdv_scipy
+        **kwargs (dict): dic of parameters.
+
+    Returns:
+        float: RSS + Penalty score (When out side of the lower and upper boundaries)
+
+    See Also:
+        fit_r_mdv_scipy
 
     """
     Rm_initial = kwargs['Rm_initial']
